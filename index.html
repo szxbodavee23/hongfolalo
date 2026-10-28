@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Honfoglaló – Kezdőoldal & Lobby</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/portal.css" />
+</head>
+<body>
+  <!-- TOP NAVIGATION -->
+  <header class="navbar">
+    <div class="navbar__inner">
+      <div class="brand">
+        <div class="brand__mark">H</div>
+        <div>
+          <div class="brand__name">HONFOGLALÓ</div>
+          <div class="brand__tag">Online Stratégiai Kvíz</div>
+        </div>
+      </div>
+
+      <div class="navbar__right">
+        <div class="status-badge" id="dbStatusBadge">
+          <span class="status-badge__dot" id="dbDot"></span>
+          <span id="dbStatusText">Adatbázis...</span>
+        </div>
+
+        <div id="navUserSection" class="nav-user hidden">
+          <span class="nav-user__badge" id="navUsernameDisplay"></span>
+          <button type="button" class="btn btn--ghost btn--sm" id="btnLogout">Kijelentkezés</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- INCOMING INVITE BANNER (FOR LOGGED-IN USERS) -->
+  <div class="invite-alert hidden" id="incomingInviteAlert">
+    <div class="invite-alert__content">
+      <span class="invite-alert__tag">MEGHÍVÓ</span>
+      <span id="incomingInviteMessage">Meghívtak egy játékba!</span>
+    </div>
+    <div class="invite-alert__actions">
+      <button type="button" class="btn btn--primary btn--sm" id="btnAcceptInvite">Csatlakozás a Lobbyhoz</button>
+      <button type="button" class="btn btn--ghost btn--sm" id="btnDismissInvite">Elutasítás</button>
+    </div>
+  </div>
+
+  <main class="container">
+    <!-- ==================== VIEW 1: GUEST LANDING & AUTH GATE ==================== -->
+    <section id="guestGateSection" class="guest-layout">
+      <div class="hero-pane">
+        <div class="hero-pane__eyebrow">KLASSZIKUS MAGYAR KVÍZSTRATÉGIA</div>
+        <h1 class="hero-pane__title">Foglald el Magyarország 19 vármegyéjét!</h1>
+        <p class="hero-pane__lead">
+          Játssz valós időben a barátaid ellen online lobbyban, vagy mérd össze a tudásod a géppel. A játék indításához regisztráció és bejelentkezés szükséges.
+        </p>
+
+        <div class="feature-grid">
+          <div class="feature-card">
+            <h3>Bázisválasztás & Terjeszkedés</h3>
+            <p>Tippelős kérdések döntik el, ki építheti fel először a 3 tornyú bázisát, majd ki foglalhatja el a szabad megyéket.</p>
+          </div>
+          <div class="feature-card">
+            <h3>6 Körös Harc & Várostrom</h3>
+            <p>Támadd meg a szomszédos megyéket feleletválasztós kérdésekkel, döntetlen esetén pedig tippelős párbajjal.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Online Meghívásos Lobby</h3>
+            <p>Hívd meg regisztrált barátaidat közvetlenül a váróterembe, és a játék egy külön dedikált játékablakban indul el.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- MANDATORY LOGIN / REGISTRATION CARD (NO SAVED ACCOUNTS) -->
+      <div class="auth-card">
+        <div class="auth-tabs">
+          <button type="button" class="auth-tab active" id="tabLoginBtn">Bejelentkezés</button>
+          <button type="button" class="auth-tab" id="tabRegisterBtn">Regisztráció</button>
+        </div>
+
+        <!-- Login Form -->
+        <form id="loginForm" class="auth-form" autocomplete="off">
+          <p class="auth-form__sub">Lépj be a felhasználóneveddel és jelszavaddal.</p>
+
+          <div class="field">
+            <label for="loginUsername">Felhasználónév vagy E-mail</label>
+            <input type="text" id="loginUsername" class="input" placeholder="Felhasználónév" autocomplete="off" required />
+          </div>
+          <div class="field">
+            <label for="loginPassword">Jelszó</label>
+            <input type="password" id="loginPassword" class="input" placeholder="••••••••" autocomplete="new-password" required />
+          </div>
+          <div class="alert alert--error hidden" id="loginError"></div>
+          <button type="submit" class="btn btn--primary btn--block">Bejelentkezés</button>
+        </form>
+
+        <!-- Register Form -->
+        <form id="registerForm" class="auth-form hidden" autocomplete="off">
+          <p class="auth-form__sub">Regisztrálj új játékos fiókot az adatbázisba.</p>
+          <div class="field">
+            <label for="regUsername">Felhasználónév</label>
+            <input type="text" id="regUsername" class="input" placeholder="pl. kovacs_peter" minlength="2" maxlength="24" autocomplete="off" required />
+          </div>
+          <div class="field">
+            <label for="regEmail">E-mail cím</label>
+            <input type="email" id="regEmail" class="input" placeholder="peter@pelda.hu" autocomplete="off" required />
+          </div>
+          <div class="field">
+            <label for="regPassword">Jelszó (min. 4 karakter)</label>
+            <input type="password" id="regPassword" class="input" placeholder="••••••••" minlength="4" autocomplete="new-password" required />
+          </div>
+          <div class="alert alert--error hidden" id="regError"></div>
+          <button type="submit" class="btn btn--primary btn--block">Regisztráció</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 2: AUTHENTICATED PORTAL DASHBOARD ==================== -->
+    <section id="portalDashboardSection" class="dashboard hidden">
+      <div class="dashboard-nav">
+        <button type="button" class="dash-tab active" data-tab="tabPlay" id="navBtnPlay">Játék & Online Lobby</button>
+        <button type="button" class="dash-tab" data-tab="tabLeaderboard" id="navBtnLeaderboard">Ranglista & Meccsek</button>
+        <button type="button" class="dash-tab" data-tab="tabSubmitQuestion" id="navBtnSubmitQuestion">Kérdés Beküldése</button>
+        <button type="button" class="dash-tab hidden" data-tab="tabAdminQuestions" id="navBtnAdminQuestions">
+          Admin: Kérdésbank & Jóváhagyás <span id="adminPendingBadge" class="tag tag--accent" style="margin-left:6px;">0</span>
+        </button>
+        <button type="button" class="dash-tab hidden" data-tab="tabAdminUsers" id="navBtnAdminUsers">
+          Admin: Játékosok Kezelése
+        </button>
+        <button type="button" class="dash-tab" data-tab="tabRules">Játékszabályok</button>
+      </div>
+
+      <!-- TAB 1: PLAY & ONLINE LOBBY -->
+      <div id="tabPlay" class="dash-pane">
+        <div class="play-grid">
+          <!-- LEFT COLUMN: ONLINE MULTIPLAYER LOBBY -->
+          <div class="panel">
+            <div class="panel__header">
+              <div>
+                <h2 class="panel__title">Online Többjátékos Lobby</h2>
+                <p class="panel__subtitle">Hívd meg egy másik regisztrált játékost, majd indítsd el a játékot új ablakban!</p>
+              </div>
+              <span class="tag tag--accent">ONLINE</span>
+            </div>
+
+            <!-- State A: Not in a room yet -->
+            <div id="lobbyIdleBox">
+              <div class="split-actions">
+                <div class="action-box">
+                  <h3>Új Lobby Létrehozása</h3>
+                  <p>Hozz létre egy szobát, amelyben a regisztrált neveddel (<strong id="hostNamePreview"></strong>) várod a többieket.</p>
+                  <div class="field-row">
+                    <div class="field">
+                      <label for="onlineRoundsSelect">Harci körök</label>
+                      <select id="onlineRoundsSelect" class="input">
+                        <option value="4">4 kör (Gyors)</option>
+                        <option value="6" selected>6 kör (Klasszikus)</option>
+                        <option value="8">8 kör (Hosszú)</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="onlineAiDiffSelect">Gépi pótlás (2 főnél)</label>
+                      <select id="onlineAiDiffSelect" class="input">
+                        <option value="easy">Könnyű</option>
+                        <option value="normal" selected>Normál</option>
+                        <option value="hard">Nehéz</option>
+                      </select>
+                    </div>
+                  </div>
+                  <button type="button" class="btn btn--primary btn--block" id="btnCreateRoom">
+                    Lobby Létrehozása
+                  </button>
+                </div>
+
+                <div class="action-box">
+                  <h3>Csatlakozás Szobakóddal</h3>
+                  <p>Ha kaptál egy 6 karakteres szobakódot, írd be ide a csatlakozáshoz:</p>
+                  <div class="field">
+                    <label for="joinCodeInput">Szobakód</label>
+                    <input type="text" id="joinCodeInput" class="input input--code" placeholder="PL. AB12CD" maxlength="8" />
+                  </div>
+                  <div class="alert alert--error hidden" id="lobbyErrorBox"></div>
+                  <button type="button" class="btn btn--secondary btn--block" id="btnJoinRoom">
+                    Csatlakozás a Lobbyhoz
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- State B: Inside an Active Online Lobby -->
+            <div id="lobbyActiveBox" class="hidden">
+              <div class="room-code-bar">
+                <div>
+                  <span class="room-code-bar__label">SZOBAKÓD</span>
+                  <div class="room-code-bar__code" id="activeRoomCode">------</div>
+                </div>
+                <div class="room-code-bar__share">
+                  <input type="text" id="activeRoomLink" class="input input--sm" readonly />
+                  <button type="button" class="btn btn--secondary btn--sm" id="btnCopyRoomLink">Link másolása</button>
+                </div>
+              </div>
+
+              <!-- 3 Player Slots -->
+              <div class="slots-grid" id="lobbySlotsGrid"></div>
+
+              <!-- Invite Registered Users from DB -->
+              <div class="invite-users-section">
+                <div class="invite-users-section__header">
+                  <span>Regisztrált játékosok meghívása a lobbyba</span>
+                  <button type="button" class="btn btn--ghost btn--xs" id="btnRefreshUsersList">Frissítés</button>
+                </div>
+                <div class="invite-users-grid" id="registeredUsersList"></div>
+              </div>
+
+              <!-- Lobby Chat -->
+              <div class="lobby-chat">
+                <div class="lobby-chat__messages" id="lobbyChatMessages"></div>
+                <form id="lobbyChatForm" class="lobby-chat__form">
+                  <input type="text" id="lobbyChatInput" class="input input--sm" placeholder="Üzenet a váróteremben..." maxlength="120" autocomplete="off" />
+                  <button type="submit" class="btn btn--secondary btn--sm">Küldés</button>
+                </form>
+              </div>
+
+              <div class="lobby-footer">
+                <div class="lobby-footer__status" id="lobbyStatusText">Várakozás...</div>
+                <div class="lobby-footer__buttons">
+                  <button type="button" class="btn btn--ghost" id="btnLeaveLobby">Kilépés a lobbyból</button>
+                  <button type="button" class="btn btn--primary" id="btnStartOnlineGame">
+                    Játék Indítása Új Ablakban ↗
+                  </button>
+                  <button type="button" class="btn btn--primary hidden" id="btnReopenOnlineWindow">
+                    Játékablak Megnyitása ↗
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT COLUMN: SINGLEPLAYER / AI LAUNCHER -->
+          <div class="panel">
+            <div class="panel__header">
+              <div>
+                <h2 class="panel__title">Gyors Játék Gép Ellen</h2>
+                <p class="panel__subtitle">Gyakorolj egyedül két gépi ellenfél ellen külön játékablakban.</p>
+              </div>
+              <span class="tag">SOLO</span>
+            </div>
+
+            <div class="field">
+              <label>Játékos (Te)</label>
+              <input type="text" id="soloPlayerName" class="input" disabled />
+            </div>
+
+            <div class="field">
+              <label for="soloDifficulty">Gépi ellenfelek nehézsége</label>
+              <select id="soloDifficulty" class="input">
+                <option value="easy">Könnyű</option>
+                <option value="normal" selected>Normál</option>
+                <option value="hard">Nehéz</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="soloRounds">Harci körök száma</label>
+              <select id="soloRounds" class="input">
+                <option value="4">4 kör</option>
+                <option value="6" selected>6 kör</option>
+                <option value="8">8 kör</option>
+              </select>
+            </div>
+
+            <button type="button" class="btn btn--primary btn--block" id="btnLaunchSoloWindow" style="margin-top: 16px;">
+              Játék Indítása Új Ablakban ↗
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: LEADERBOARD & MATCHES -->
+      <div id="tabLeaderboard" class="dash-pane hidden">
+        <div class="play-grid">
+          <div class="panel">
+            <h2 class="panel__title" style="margin-bottom: 14px;">Regisztrált Játékosok Ranglistája</h2>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Felhasználónév</th>
+                    <th>Győzelem / Meccs</th>
+                    <th>Összpontszám</th>
+                    <th>Elfoglalt megyék</th>
+                    <th>Helyes válaszok</th>
+                  </tr>
+                </thead>
+                <tbody id="portalLeaderboardBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h2 class="panel__title" style="margin-bottom: 14px;">Legutóbbi Befejezett Meccsek</h2>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Győztes</th>
+                    <th>Piros</th>
+                    <th>Zöld</th>
+                    <th>Kék</th>
+                  </tr>
+                </thead>
+                <tbody id="portalMatchesBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3 (FOR PLAYERS): SUBMIT QUESTION FOR ADMIN APPROVAL -->
+      <div id="tabSubmitQuestion" class="dash-pane hidden">
+        <div class="play-grid">
+          <div class="panel">
+            <h2 class="panel__title" style="margin-bottom: 6px;">Új Kérdés Beküldése</h2>
+            <p class="panel__subtitle" style="margin-bottom: 18px;">
+              A beküldött kérdések az adminisztrátor jóváhagyása után kerülnek be az élő játékba.
+            </p>
+
+            <form id="playerSubmitQuestionForm">
+              <div class="field-row">
+                <div class="field">
+                  <label for="userQType">Típus</label>
+                  <select id="userQType" class="input">
+                    <option value="multiple_choice">Feleletválasztós (4 válasz)</option>
+                    <option value="estimation">Tippelős (Számérték)</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="userQCategory">Kategória</label>
+                  <select id="userQCategory" class="input">
+                    <option value="Történelem">Történelem</option>
+                    <option value="Földrajz">Földrajz</option>
+                    <option value="Irodalom és Nyelv">Irodalom és Nyelv</option>
+                    <option value="Tudomány és Technika">Tudomány és Technika</option>
+                    <option value="Sport">Sport</option>
+                    <option value="Film, Zene, Művészet">Film, Zene, Művészet</option>
+                    <option value="Élővilág">Élővilág</option>
+                    <option value="Mindennapok és Kultúra">Mindennapok és Kultúra</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="userQText">Kérdés szövege</label>
+                <textarea id="userQText" class="input" rows="2" placeholder="Írd be a kérdést..." required></textarea>
+              </div>
+
+              <div id="userQMcInputs">
+                <div class="field">
+                  <label>Helyes válasz</label>
+                  <input type="text" id="userQOpt0" class="input" placeholder="Helyes válasz..." />
+                </div>
+                <div class="field">
+                  <label>Hibás válasz 1</label>
+                  <input type="text" id="userQOpt1" class="input" placeholder="Hibás válasz..." />
+                </div>
+                <div class="field">
+                  <label>Hibás válasz 2</label>
+                  <input type="text" id="userQOpt2" class="input" placeholder="Hibás válasz..." />
+                </div>
+                <div class="field">
+                  <label>Hibás válasz 3</label>
+                  <input type="text" id="userQOpt3" class="input" placeholder="Hibás válasz..." />
+                </div>
+              </div>
+
+              <div id="userQEstInputs" class="hidden">
+                <div class="field-row">
+                  <div class="field">
+                    <label>Pontos számérték</label>
+                    <input type="number" id="userQEstVal" class="input" placeholder="pl. 1848" />
+                  </div>
+                  <div class="field">
+                    <label>Egység</label>
+                    <input type="text" id="userQEstUnit" class="input" placeholder="pl. év, km" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="alert hidden" id="userQFeedback"></div>
+              <button type="submit" class="btn btn--primary">Kérdés Beküldése Jóváhagyásra</button>
+            </form>
+          </div>
+
+          <div class="panel">
+            <h2 class="panel__title" style="margin-bottom: 14px;">Általad Beküldött Kérdések Állapota</h2>
+            <div class="q-list" id="mySubmittedQuestionsList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4 (ADMIN ONLY): QUESTION APPROVAL & DATABASE MANAGER -->
+      <div id="tabAdminQuestions" class="dash-pane hidden">
+        <div class="panel" style="margin-bottom: 32px;">
+          <div class="panel__header">
+            <div>
+              <h2 class="panel__title">Jóváhagyásra Váró Beküldött Kérdések</h2>
+              <p class="panel__subtitle">A játékosok által beküldött kérdések csak az elfogadásod után jelennek meg a játékban.</p>
+            </div>
+          </div>
+          <div class="q-list" id="adminPendingQuestionsList"></div>
+        </div>
+
+        <div class="play-grid">
+          <div class="panel">
+            <h2 class="panel__title" style="margin-bottom: 14px;">Új Kérdés Közvetlen Hozzáadása (Admin)</h2>
+            <form id="adminQuestionForm">
+              <div class="field-row">
+                <div class="field">
+                  <label for="adminQType">Típus</label>
+                  <select id="adminQType" class="input">
+                    <option value="multiple_choice">Feleletválasztós (4 válasz)</option>
+                    <option value="estimation">Tippelős (Számérték)</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="adminQCategory">Kategória</label>
+                  <select id="adminQCategory" class="input">
+                    <option value="Történelem">Történelem</option>
+                    <option value="Földrajz">Földrajz</option>
+                    <option value="Irodalom és Nyelv">Irodalom és Nyelv</option>
+                    <option value="Tudomány és Technika">Tudomány és Technika</option>
+                    <option value="Sport">Sport</option>
+                    <option value="Film, Zene, Művészet">Film, Zene, Művészet</option>
+                    <option value="Élővilág">Élővilág</option>
+                    <option value="Mindennapok és Kultúra">Mindennapok és Kultúra</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="adminQText">Kérdés szövege</label>
+                <textarea id="adminQText" class="input" rows="2" placeholder="Írd be a kérdést..." required></textarea>
+              </div>
+
+              <div id="adminQMcInputs">
+                <div class="field">
+                  <label>Helyes válasz</label>
+                  <input type="text" id="adminQOpt0" class="input" placeholder="Helyes válasz..." />
+                </div>
+                <div class="field">
+                  <label>Hibás válasz 1</label>
+                  <input type="text" id="adminQOpt1" class="input" placeholder="Hibás válasz..." />
+                </div>
+                <div class="field">
+                  <label>Hibás válasz 2</label>
+                  <input type="text" id="adminQOpt2" class="input" placeholder="Hibás válasz..." />
+                </div>
+                <div class="field">
+                  <label>Hibás válasz 3</label>
+                  <input type="text" id="adminQOpt3" class="input" placeholder="Hibás válasz..." />
+                </div>
+              </div>
+
+              <div id="adminQEstInputs" class="hidden">
+                <div class="field-row">
+                  <div class="field">
+                    <label>Pontos számérték</label>
+                    <input type="number" id="adminQEstVal" class="input" placeholder="pl. 1848" />
+                  </div>
+                  <div class="field">
+                    <label>Egység</label>
+                    <input type="text" id="adminQEstUnit" class="input" placeholder="pl. év, km" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="alert alert--error hidden" id="adminQFeedback"></div>
+              <button type="submit" class="btn btn--primary">Azonnali Mentés az Adatbázisba</button>
+            </form>
+          </div>
+
+          <div class="panel">
+            <div class="panel__header">
+              <h2 class="panel__title" id="adminApprovedCountTitle">Elfogadott Kérdések az Adatbázisban</h2>
+              <input type="text" id="adminQFilterInput" class="input input--sm" placeholder="Keresés..." style="max-width: 200px;" />
+            </div>
+            <div class="q-list" id="adminApprovedQuestionsList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 5 (ADMIN ONLY): PLAYER MANAGEMENT -->
+      <div id="tabAdminUsers" class="dash-pane hidden">
+        <div class="panel">
+          <div class="panel__header">
+            <div>
+              <h2 class="panel__title">Regisztrált Játékosok Kezelése</h2>
+              <p class="panel__subtitle">Itt módosíthatod a játékosok pontszámát, visszaállíthatod a jelszavukat, nullázhatod a statisztikáikat vagy törölheted a fiókjukat.</p>
+            </div>
+            <button type="button" class="btn btn--secondary btn--sm" id="btnRefreshAdminUsers">Lista frissítése</button>
+          </div>
+
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Felhasználónév</th>
+                  <th>E-mail</th>
+                  <th>Meccsek (Győzelem)</th>
+                  <th>Összpontszám</th>
+                  <th>Műveletek</th>
+                </tr>
+              </thead>
+              <tbody id="adminUsersTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 6: RULES -->
+      <div id="tabRules" class="dash-pane hidden">
+        <div class="panel" style="max-width: 780px;">
+          <h2 class="panel__title" style="margin-bottom: 12px;">A Játék Menete</h2>
+          <div class="rules-list">
+            <div class="rule-block">
+              <h3>1. Fázis – Bázisválasztás</h3>
+              <p>Mindhárom játékos ugyanarra a tippelős kérdésre válaszol. A pontosabb (majd gyorsabb) játékos választhat először megyét a 3 tornyú bázisának (1000 pont).</p>
+            </div>
+            <div class="rule-block">
+              <h3>2. Fázis – Terjeszkedés</h3>
+              <p>A szabadon maradt 16 megyéért tippelős kérdések zajlanak. Minden kérdés után az 1. helyezett 2 megyét, a 2. helyezett 1 megyét foglalhat el (200 pont/megye). Csak saját területtel szomszédos szabad megye választható, kivéve ha minden szomszédos megye foglalt.</p>
+            </div>
+            <div class="rule-block">
+              <h3>3. Fázis – Harc</h3>
+              <p>A játékosok egymás szomszédos megyéit támadják. Feleletválasztós kérdés dönt: ha csak a támadó válaszol jól, azonnal elfoglalja a megyét (értéke 400 pontra nő). Ha mindketten jól válaszolnak, tippelős párbaj dönt. A 3 tornyú bázist háromszor kell sikeresen ostromolni az ellenfél összes területének megszerzéséhez.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="/js/portal.js"></script>
+</body>
+</html>

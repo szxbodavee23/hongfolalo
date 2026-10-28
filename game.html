@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Honfoglaló – Játék</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/game.css" />
+</head>
+<body class="game-canvas">
+  <!-- FULL-SCREEN PARCHMENT MAP CANVAS -->
+  <div class="map-world" id="svgStage">
+    <svg
+      id="hungaryMapSvg"
+      class="hungary-svg"
+      viewBox="0 0 1000 620"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <defs>
+        <filter id="mapShadow" x="-8%" y="-8%" width="116%" height="116%">
+          <feDropShadow dx="2" dy="6" stdDeviation="6" flood-color="#2b1808" flood-opacity="0.45" />
+        </filter>
+      </defs>
+      <g id="mapPathsGroup" filter="url(#mapShadow)"></g>
+      <g id="mapOverlaysGroup"></g>
+    </svg>
+
+    <div class="county-tooltip hidden" id="countyTooltip"></div>
+  </div>
+
+  <!-- FLOATING TOP OVERLAY (NO BOXED HEADER, FLOATING BANNERS OVER THE MAP) -->
+  <header class="floating-top">
+    <div class="floating-phase">
+      <span class="floating-phase__badge" id="hudPhaseBadge">1. FÁZIS</span>
+      <span class="floating-phase__round" id="mapRoundInfo">Bázisválasztás</span>
+      <span class="floating-phase__text" id="hudPhaseText">Betöltés...</span>
+    </div>
+
+    <div class="floating-players" id="hudPlayersBar"></div>
+
+    <div class="floating-actions">
+      <button type="button" class="pill-btn" id="btnToggleAudio">Hang: BE</button>
+      <button type="button" class="pill-btn pill-btn--exit" id="btnExitGame">Kilépés</button>
+    </div>
+  </header>
+
+  <!-- FLOATING BOTTOM PROMPT & COLLAPSIBLE CHAT STREAM -->
+  <footer class="floating-bottom">
+    <div class="floating-prompt" id="bottomPromptText">
+      Várakozás a következő lépésre...
+    </div>
+
+    <div class="floating-chat-wrap">
+      <div class="floating-log" id="gameLogFeed"></div>
+      <form class="floating-chat-form" id="gameChatForm">
+        <div class="quick-msgs">
+          <button type="button" class="chip-btn" data-msg="Jó játékot!">Jó játékot!</button>
+          <button type="button" class="chip-btn" data-msg="Szép válasz!">Szép válasz!</button>
+        </div>
+        <input type="text" id="gameChatInput" class="chat-input" placeholder="Üzenet..." maxlength="120" autocomplete="off" />
+        <button type="submit" class="pill-btn pill-btn--gold">Küldés</button>
+      </form>
+    </div>
+
+    <div class="hidden" id="countyDetailBox"></div>
+  </footer>
+
+  <!-- ==================== MODAL 1: NUMERIC ESTIMATION (TIPPELŐS KÉRDÉS) ==================== -->
+  <div class="overlay hidden" id="estimationOverlay">
+    <div class="q-modal">
+      <div class="q-modal__top">
+        <span class="q-badge" id="estCategory">Történelem</span>
+        <span class="q-context" id="estContext">Tippelős kérdés</span>
+        <span class="q-timer" id="estTimer">15 mp</span>
+      </div>
+
+      <div class="q-scroll-text" id="estQuestionText"></div>
+
+      <div class="q-status-banner hidden" id="estStatusBanner"></div>
+
+      <!-- Numeric Input & Pad -->
+      <div class="numpad-wrap" id="estInputWrap">
+        <div class="numpad-display-wrap">
+          <input
+            type="text"
+            id="estInputDisplay"
+            class="numpad-display"
+            placeholder="Tipp..."
+            inputmode="numeric"
+            autocomplete="off"
+          />
+          <span class="numpad-unit" id="estUnitText"></span>
+        </div>
+
+        <div class="numpad-grid">
+          <button type="button" class="numpad-key" data-key="1">1</button>
+          <button type="button" class="numpad-key" data-key="2">2</button>
+          <button type="button" class="numpad-key" data-key="3">3</button>
+          <button type="button" class="numpad-key" data-key="4">4</button>
+          <button type="button" class="numpad-key" data-key="5">5</button>
+          <button type="button" class="numpad-key" data-key="6">6</button>
+          <button type="button" class="numpad-key" data-key="7">7</button>
+          <button type="button" class="numpad-key" data-key="8">8</button>
+          <button type="button" class="numpad-key" data-key="9">9</button>
+          <button type="button" class="numpad-key numpad-key--alt" data-key="CLEAR">Töröl</button>
+          <button type="button" class="numpad-key" data-key="0">0</button>
+          <button type="button" class="numpad-key numpad-key--alt" data-key="BACK">⌫</button>
+        </div>
+
+        <button type="button" class="btn-main btn-main--block" id="btnSubmitEst">
+          Tipp Beküldése (Enter)
+        </button>
+      </div>
+
+      <!-- Estimation Results -->
+      <div class="est-results hidden" id="estResultsWrap">
+        <div class="est-results__answer">
+          Helyes válasz: <strong id="estCorrectAnswer"></strong>
+        </div>
+        <div class="est-results__rows" id="estRankingRows"></div>
+        <button type="button" class="btn-main" id="btnEstContinue">Tovább</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 2: MULTIPLE-CHOICE BATTLE ==================== -->
+  <div class="overlay hidden" id="mcOverlay">
+    <div class="q-modal">
+      <div class="q-modal__top">
+        <span class="q-badge" id="mcCategory">Kategória</span>
+        <span class="q-context" id="mcContext">Megye ostroma</span>
+        <span class="q-timer" id="mcTimer">15 mp</span>
+      </div>
+
+      <div class="duel-vs-bar" id="mcDuelBar"></div>
+
+      <div class="q-scroll-text" id="mcQuestionText"></div>
+
+      <div class="q-status-banner hidden" id="mcStatusBanner"></div>
+
+      <!-- Lifelines -->
+      <div class="lifelines-row">
+        <button type="button" class="lifeline-pill" id="btnLifeHalve">Felező (50:50)</button>
+        <button type="button" class="lifeline-pill" id="btnLifePoll">Közönség tippje</button>
+        <button type="button" class="lifeline-pill" id="btnLifeTime">+10 mp idő</button>
+      </div>
+
+      <div class="poll-hint hidden" id="mcPollHint"></div>
+
+      <div class="mc-grid" id="mcOptionsGrid"></div>
+
+      <div class="mc-summary hidden" id="mcSummaryBox">
+        <div class="mc-summary__text" id="mcSummaryText"></div>
+        <button type="button" class="btn-main" id="btnMcContinue">Tovább</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL 3: GAME OVER ==================== -->
+  <div class="overlay hidden" id="gameOverOverlay">
+    <div class="q-modal">
+      <div class="gameover-header">
+        <div class="gameover-header__label">A JÁTÉK VÉGET ÉRT</div>
+        <h2 class="gameover-header__winner" id="gameOverWinnerName"></h2>
+        <p class="gameover-header__sub" id="gameOverWinnerScore"></p>
+      </div>
+
+      <div class="est-results__rows" id="gameOverStandings"></div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px;">
+        <button type="button" class="pill-btn" id="btnCloseGameOverModal">Térkép megtekintése</button>
+        <button type="button" class="btn-main" id="btnBackToPortal">Kilépés a Lobbyba</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/js/gameClient.js"></script>
+</body>
+</html>

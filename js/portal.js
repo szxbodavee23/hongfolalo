@@ -2,6 +2,8 @@
 
 let currentUser = null;
 let currentAuthToken = null;
+let sessionExpiryTimer = null;
+const SESSION_TTL_MS = 15 * 60 * 1000; // auto-logout 15 minutes after login
 let registeredUsers = [];
 let adminQuestions = { pending: [], approved: [] };
 let adminUsers = [];
@@ -46,23 +48,40 @@ async function initPortal() {
   setInterval(refreshLiveStats, 4000);
 }
 
+function clearStoredSession() {
+  ['honfoglalo_user', 'honfoglalo_token', 'honfoglalo_login_at'].forEach(k => {
+    sessionStorage.removeItem(k);
+    localStorage.removeItem(k);
+  });
+}
+
+function scheduleSessionExpiry(loginAt) {
+  if (sessionExpiryTimer) clearTimeout(sessionExpiryTimer);
+  const remaining = SESSION_TTL_MS - (Date.now() - loginAt);
+  if (remaining > 0) {
+    sessionExpiryTimer = setTimeout(() => setLoggedInUser(null, null), remaining);
+  }
+}
+
 function loadUserFromStorage() {
   try {
     const raw = sessionStorage.getItem('honfoglalo_user') || localStorage.getItem('honfoglalo_user');
     const tok = sessionStorage.getItem('honfoglalo_token') || localStorage.getItem('honfoglalo_token');
-    if (raw) {
+    const loginAt = Number(
+      sessionStorage.getItem('honfoglalo_login_at') || localStorage.getItem('honfoglalo_login_at') || 0
+    );
+    if (raw && loginAt && Date.now() - loginAt <= SESSION_TTL_MS) {
       const parsed = JSON.parse(raw);
-      // Never auto-restore admin_user from storage ("admin_user ne legyen elmentve")
-      if (parsed && parsed.username !== 'admin_user' && !parsed.isAdmin) {
+      if (parsed && parsed.username) {
         currentUser = parsed;
         currentAuthToken = tok || null;
-      } else {
-        sessionStorage.removeItem('honfoglalo_user');
-        localStorage.removeItem('honfoglalo_user');
-        sessionStorage.removeItem('honfoglalo_token');
-        localStorage.removeItem('honfoglalo_token');
+        scheduleSessionExpiry(loginAt);
+        return;
       }
     }
+    clearStoredSession();
+    currentUser = null;
+    currentAuthToken = null;
   } catch {
     currentUser = null;
     currentAuthToken = null;
@@ -72,18 +91,25 @@ function loadUserFromStorage() {
 function setLoggedInUser(user, authToken = null) {
   currentUser = user;
   currentAuthToken = authToken;
-  if (user && !user.isAdmin && user.username !== 'admin_user') {
-    sessionStorage.setItem('honfoglalo_user', JSON.stringify(user));
-    localStorage.setItem('honfoglalo_user', JSON.stringify(user));
+  clearStoredSession();
+  if (sessionExpiryTimer) clearTimeout(sessionExpiryTimer);
+  if (user) {
+    const payload = JSON.stringify(user);
+    const now = String(Date.now());
+    const isAdmin = Boolean(user.isAdmin || user.username === 'admin_user');
+    // Admin session is tab-scoped only (sessionStorage) — survives refresh,
+    // dies with the tab; regular users also persist in localStorage (15 min cap either way)
+    sessionStorage.setItem('honfoglalo_user', payload);
+    sessionStorage.setItem('honfoglalo_login_at', now);
+    if (!isAdmin) {
+      localStorage.setItem('honfoglalo_user', payload);
+      localStorage.setItem('honfoglalo_login_at', now);
+    }
     if (authToken) {
       sessionStorage.setItem('honfoglalo_token', authToken);
-      localStorage.setItem('honfoglalo_token', authToken);
+      if (!isAdmin) localStorage.setItem('honfoglalo_token', authToken);
     }
-  } else {
-    sessionStorage.removeItem('honfoglalo_user');
-    localStorage.removeItem('honfoglalo_user');
-    sessionStorage.removeItem('honfoglalo_token');
-    localStorage.removeItem('honfoglalo_token');
+    scheduleSessionExpiry(Date.now());
   }
   renderAuthGate();
 }

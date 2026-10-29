@@ -211,6 +211,55 @@ function renderAll() {
   renderHud();
   renderMapState();
   renderLogFeed();
+  renderTurnOrder();
+}
+
+// Color-coded turn order panel: who is on turn now and who comes next
+function renderTurnOrder() {
+  const panel = document.getElementById('turnOrderPanel');
+  const list = document.getElementById('turnOrderList');
+  if (!panel || !list) return;
+
+  if (!engine.phase || engine.phase === PHASES.GAME_OVER) {
+    panel.classList.add('hidden');
+    return;
+  }
+
+  let orderIds = [];
+  if (
+    engine.phase === PHASES.BASE_QUESTION ||
+    engine.phase === PHASES.BASE_SELECTION ||
+    engine.phase === PHASES.EXPANSION_QUESTION ||
+    engine.phase === PHASES.EXPANSION_SELECTION
+  ) {
+    const q = engine.selectionQueue || [];
+    orderIds = engine.currentSelector && !q.includes(engine.currentSelector)
+      ? [engine.currentSelector, ...q]
+      : [...q];
+  } else {
+    orderIds = (engine.battleTurnQueue || []).slice(engine.currentBattleTurnIndex || 0);
+  }
+
+  if (!orderIds.length) {
+    panel.classList.add('hidden');
+    return;
+  }
+
+  panel.classList.remove('hidden');
+  list.innerHTML = '';
+  orderIds.forEach((pid, idx) => {
+    const p = engine.players[pid];
+    if (!p) return;
+    const isCurrent = engine.currentSelector === pid;
+    const chip = document.createElement('div');
+    chip.className = `turn-chip turn-chip--${pid}${isCurrent ? ' turn-chip--current' : ''}${p.eliminated ? ' turn-chip--eliminated' : ''}`;
+    chip.innerHTML = `
+      <span class="turn-chip__dot"></span>
+      <span class="turn-chip__name">${idx + 1}. ${p.name}</span>
+      ${isCurrent ? '<span class="turn-chip__now">soron</span>' : ''}
+    `;
+    list.appendChild(chip);
+  });
 }
 
 function renderHud() {
@@ -411,8 +460,8 @@ function syncOnlineModals(state) {
   const isNewQ = online.lastQuestionId !== qs.id;
 
   if (qs.questionType === 'estimation') {
-    mcOv.classList.add('hidden');
-    estOv.classList.remove('hidden');
+    if (estOv.classList.contains('hidden') || isNewQ) presentOverlay(estOv);
+    else estOv.classList.remove('hidden');
 
     document.getElementById('estCategory').textContent = qs.category;
     document.getElementById('estContext').textContent = qs.contextLabel || 'Tippelős kérdés';
@@ -426,6 +475,24 @@ function syncOnlineModals(state) {
 
     if (qs.stage === 'ANSWERING') {
       resWrap.classList.add('hidden');
+
+      // Estimation lifelines (Papagáj / Távcső) — only for participants still answering
+      const myP = state.players[online.myColor];
+      const canUseEstLife = isParticipant && !qs.hasViewerSubmitted;
+      document.getElementById('estLifelinesRow').classList.toggle('hidden', !canUseEstLife);
+      document.getElementById('btnLifeParrot').disabled = !canUseEstLife || !myP?.lifelines?.parrot;
+      document.getElementById('btnLifeTelescope').disabled = !canUseEstLife || !myP?.lifelines?.telescope;
+      const estHint = document.getElementById('estLifelineHint');
+      if (qs.viewerParrotRange) {
+        estHint.innerHTML = `🦜 <strong>Papagáj súg:</strong> a helyes válasz <strong>${qs.viewerParrotRange.low}</strong> és <strong>${qs.viewerParrotRange.high}</strong> közé esik!`;
+        estHint.classList.remove('hidden');
+      } else if (qs.viewerTelescope && qs.viewerTelescope.length) {
+        estHint.innerHTML = `🔭 <strong>Távcső mutatja:</strong> ${qs.viewerTelescope.map(g => `${g.name}: <strong>${g.guess}</strong>`).join(' • ')}`;
+        estHint.classList.remove('hidden');
+      } else if (isNewQ) {
+        estHint.classList.add('hidden');
+      }
+
       const statusList = qs.participants
         .map(pid => `${qs.submittedColors.includes(pid) ? '✓' : '...'} ${state.players[pid]?.name || pid}`)
         .join('  |  ');
@@ -468,8 +535,8 @@ function syncOnlineModals(state) {
       });
     }
   } else if (qs.questionType === 'multiple_choice') {
-    estOv.classList.add('hidden');
-    mcOv.classList.remove('hidden');
+    if (mcOv.classList.contains('hidden') || isNewQ) presentOverlay(mcOv);
+    else mcOv.classList.remove('hidden');
 
     document.getElementById('mcCategory').textContent = qs.category;
     document.getElementById('mcContext').textContent = qs.contextLabel || 'Megye ostroma';
@@ -506,7 +573,6 @@ function syncOnlineModals(state) {
 
       document.getElementById('btnLifeHalve').disabled = !canAnswer || !myP?.lifelines?.halve;
       document.getElementById('btnLifePoll').disabled = !canAnswer || !myP?.lifelines?.owl;
-      document.getElementById('btnLifeTime').disabled = !canAnswer || !myP?.lifelines?.extraTime;
 
       if (canAnswer) {
         statusBanner.classList.add('hidden');
@@ -536,6 +602,39 @@ function syncOnlineModals(state) {
 
   online.lastQuestionId = qs.id;
   online.lastStage = qs.stage;
+}
+
+// Soft overlay transitions: crossfade out old modals, replay entrance on same-modal reuse
+function presentOverlay(overlayEl) {
+  for (const o of document.querySelectorAll('.overlay')) {
+    if (o !== overlayEl && !o.classList.contains('hidden')) {
+      o.classList.add('overlay--closing');
+      setTimeout(() => {
+        o.classList.add('hidden');
+        o.classList.remove('overlay--closing');
+      }, 160);
+    }
+  }
+  const wasVisible = !overlayEl.classList.contains('hidden');
+  overlayEl.classList.remove('hidden');
+  overlayEl.style.zIndex = 101; // incoming modal slides in above the fading one
+  if (wasVisible) {
+    const modal = overlayEl.querySelector('.q-modal');
+    if (modal) {
+      modal.style.animation = 'none';
+      void modal.offsetWidth; // reflow restarts the entrance animation
+      modal.style.animation = '';
+    }
+  }
+}
+
+function hideOverlay(overlayEl) {
+  if (overlayEl.classList.contains('hidden')) return;
+  overlayEl.classList.add('overlay--closing');
+  setTimeout(() => {
+    overlayEl.classList.add('hidden');
+    overlayEl.classList.remove('overlay--closing');
+  }, 160);
 }
 
 // ==================== SOLO AI MODE ====================
@@ -691,7 +790,13 @@ function openLocalEstimation(isTiebreaker, onComplete) {
 
   const disp = document.getElementById('estInputDisplay');
   disp.value = '';
-  document.getElementById('estimationOverlay').classList.remove('hidden');
+  document.getElementById('estLifelineHint').classList.add('hidden');
+  const estP = engine.players.red;
+  const canUseEstLifelines = !localSpectatorMode;
+  document.getElementById('estLifelinesRow').classList.toggle('hidden', !canUseEstLifelines);
+  document.getElementById('btnLifeParrot').disabled = !canUseEstLifelines || !estP?.lifelines?.parrot;
+  document.getElementById('btnLifeTelescope').disabled = !canUseEstLifelines || !estP?.lifelines?.telescope;
+  presentOverlay(document.getElementById('estimationOverlay'));
   if (!localSpectatorMode) {
     setTimeout(() => disp.focus(), 50);
   }
@@ -752,6 +857,8 @@ function submitEstValue() {
   const q = engine.activeQuestion;
   const res = localIsTiebreakerEst ? engine.activeBattle?.tiebreakerResults : engine.lastQuestionResults;
   document.getElementById('estInputWrap').classList.add('hidden');
+  document.getElementById('estLifelinesRow').classList.add('hidden');
+  document.getElementById('estLifelineHint').classList.add('hidden');
   document.getElementById('estResultsWrap').classList.remove('hidden');
   document.getElementById('estCorrectAnswer').textContent = `${q.answer}${q.unit ? ' ' + q.unit : ''}`;
 
@@ -817,10 +924,9 @@ function openLocalMcBattle() {
   const canUseLifelines = !localSpectatorMode;
   document.getElementById('btnLifeHalve').disabled = !canUseLifelines || !p.lifelines.halve;
   document.getElementById('btnLifePoll').disabled = !canUseLifelines || !p.lifelines.owl;
-  document.getElementById('btnLifeTime').disabled = !canUseLifelines || !p.lifelines.extraTime;
 
   renderMcButtons(q.options, !localSpectatorMode, [], null);
-  document.getElementById('mcOverlay').classList.remove('hidden');
+  presentOverlay(document.getElementById('mcOverlay'));
 
   clearInterval(localTimerId);
   localStartMs = Date.now();
@@ -915,7 +1021,6 @@ function submitMcChoice(choiceIndex) {
     summaryText.textContent = 'Mindketten helyesen válaszoltatok! Tippelős párbaj dönt!';
     contBtn.onclick = () => {
       contBtn.onclick = null;
-      document.getElementById('mcOverlay').classList.add('hidden');
       openLocalEstimation(true, () => {
         engine.submitBattleTiebreakerAnswers(localSubmissions);
       });
@@ -925,7 +1030,7 @@ function submitMcChoice(choiceIndex) {
     summaryText.textContent = engine.activeBattle.outcome?.message || '';
     contBtn.onclick = () => {
       contBtn.onclick = null;
-      document.getElementById('mcOverlay').classList.add('hidden');
+      hideOverlay(document.getElementById('mcOverlay'));
       engine.completeCurrentBattleTurn();
       stepSoloFlow();
     };
@@ -1076,7 +1181,7 @@ function bindGameEvents() {
   document.getElementById('btnEstContinue').addEventListener('click', () => {
     const estOv = document.getElementById('estimationOverlay');
     if (estOv.classList.contains('hidden')) return;
-    estOv.classList.add('hidden');
+    hideOverlay(estOv);
 
     if (online.active) {
       online.dismissedQuestionId = online.lastQuestionId;
@@ -1148,21 +1253,49 @@ function bindGameEvents() {
     document.getElementById('btnLifePoll').disabled = true;
   });
 
-  document.getElementById('btnLifeTime').addEventListener('click', () => {
+  document.getElementById('btnLifeParrot').addEventListener('click', () => {
     if (online.active) {
       fetch(`/api/rooms/${online.code}/lifeline`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: online.token, lifeline: 'extraTime' })
+        body: JSON.stringify({ token: online.token, lifeline: 'parrot' })
       });
       return;
     }
     const p = engine.players.red;
-    if (!p.lifelines.extraTime) return;
-    p.lifelines.extraTime = false;
-    localTimeLeft += 10;
-    document.getElementById('mcTimer').textContent = `${localTimeLeft} mp`;
-    document.getElementById('btnLifeTime').disabled = true;
+    if (!p?.lifelines?.parrot || localSpectatorMode) return;
+    p.lifelines.parrot = false;
+    const truth = engine.activeQuestion.answer;
+    const spread = 0.10 + Math.random() * 0.15;
+    const low = Math.max(0, Math.floor(truth * (1 - spread)));
+    const high = Math.ceil(truth * (1 + spread));
+    const hint = document.getElementById('estLifelineHint');
+    hint.innerHTML = `🦜 <strong>Papagáj súg:</strong> a helyes válasz <strong>${low}</strong> és <strong>${high}</strong> közé esik!`;
+    hint.classList.remove('hidden');
+    document.getElementById('btnLifeParrot').disabled = true;
+  });
+
+  document.getElementById('btnLifeTelescope').addEventListener('click', () => {
+    if (online.active) {
+      fetch(`/api/rooms/${online.code}/lifeline`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: online.token, lifeline: 'telescope' })
+      });
+      return;
+    }
+    const p = engine.players.red;
+    if (!p?.lifelines?.telescope || localSpectatorMode) return;
+    p.lifelines.telescope = false;
+    const others = Object.entries(localSubmissions)
+      .filter(([pid, sub]) => pid !== 'red' && sub?.guess != null)
+      .map(([pid, sub]) => `${engine.players[pid]?.name || pid}: <strong>${sub.guess}</strong>`);
+    const hint = document.getElementById('estLifelineHint');
+    hint.innerHTML = others.length
+      ? `🔭 <strong>Távcső mutatja:</strong> ellenfeleid tippjei — ${others.join(' • ')}`
+      : `🔭 <strong>Távcső:</strong> még nem látszik ellenfél-tipp.`;
+    hint.classList.remove('hidden');
+    document.getElementById('btnLifeTelescope').disabled = true;
   });
 
   // Chat & Quick messages

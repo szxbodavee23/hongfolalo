@@ -105,13 +105,15 @@ export class HonfoglaloEngine {
       eliminated: false,
       baseCountyId: null,
       score: 0,
+      bonusScore: 0,
       countiesCount: 0,
       correctAnswers: 0,
       totalAnswers: 0,
       lifelines: {
-        halve: true,     // 50:50 Felező
-        owl: true,       // Bagoly súgása (közönség)
-        extraTime: true  // +10 mp Időhúzás
+        halve: true,      // 50:50 Felező (feleletválasztós)
+        owl: true,        // Bagoly súgása / közönség (feleletválasztós)
+        parrot: true,     // Papagáj súgása – tartományt mutat (tippelős)
+        telescope: true   // Távcső – megmutatja a gépi ellenfelek tippjeit (tippelős)
       }
     };
   }
@@ -659,11 +661,12 @@ export class HonfoglaloEngine {
             }
           }
           defender.eliminated = true;
+          attacker.bonusScore = (attacker.bonusScore || 0) + 1000;
           this.activeBattle.outcome = {
             attackerWon: true,
             towerDestroyed: true,
             baseConquered: true,
-            message: `${attacker.name} elfoglalta ${defender.name} bázisát (${county.name}), és megszerezte mind a(z) ${inheritedCount} megyéjét!`
+            message: `${attacker.name} elfoglalta ${defender.name} bázisát (${county.name}), megszerezte mind a(z) ${inheritedCount} megyéjét, és +1000 bónuszpontot kapott!`
           };
           this.logEvent(this.activeBattle.outcome.message, 'castle');
         }
@@ -754,7 +757,7 @@ export class HonfoglaloEngine {
     for (const id of ['red', 'green', 'blue']) {
       const owned = Object.values(this.counties).filter(c => c.owner === id);
       this.players[id].countiesCount = owned.length;
-      this.players[id].score = owned.reduce((sum, c) => sum + c.points, 0);
+      this.players[id].score = owned.reduce((sum, c) => sum + c.points, 0) + (this.players[id].bonusScore || 0);
     }
   }
 

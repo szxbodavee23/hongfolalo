@@ -41,6 +41,11 @@
 
     <div class="floating-players" id="hudPlayersBar"></div>
 
+    <aside class="turn-order hidden" id="turnOrderPanel" aria-label="Játéksorrend">
+      <div class="turn-order__title">Játéksorrend</div>
+      <div class="turn-order__list" id="turnOrderList"></div>
+    </aside>
+
     <div class="floating-actions">
       <button type="button" class="pill-btn" id="btnToggleAudio">Hang: BE</button>
       <button type="button" class="pill-btn pill-btn--exit" id="btnExitGame">Kilépés</button>
@@ -80,6 +85,13 @@
       <div class="q-scroll-text" id="estQuestionText"></div>
 
       <div class="q-status-banner hidden" id="estStatusBanner"></div>
+
+      <!-- Lifelines (Papagáj & Távcső) -->
+      <div class="lifelines-row" id="estLifelinesRow">
+        <button type="button" class="lifeline-pill" id="btnLifeParrot">🦜 Papagáj</button>
+        <button type="button" class="lifeline-pill" id="btnLifeTelescope">🔭 Távcső</button>
+      </div>
+      <div class="poll-hint hidden" id="estLifelineHint"></div>
 
       <!-- Numeric Input & Pad -->
       <div class="numpad-wrap" id="estInputWrap">
@@ -145,7 +157,6 @@
       <div class="lifelines-row">
         <button type="button" class="lifeline-pill" id="btnLifeHalve">Felező (50:50)</button>
         <button type="button" class="lifeline-pill" id="btnLifePoll">Közönség tippje</button>
-        <button type="button" class="lifeline-pill" id="btnLifeTime">+10 mp idő</button>
       </div>
 
       <div class="poll-hint hidden" id="mcPollHint"></div>

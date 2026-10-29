@@ -271,6 +271,8 @@ class RoomManager {
       submissions: {},
       halvedByColor: {},
       owlPollByColor: {},
+      parrotRangeByColor: {},
+      telescopeByColor: {},
       revealData: null
     };
 
@@ -372,6 +374,21 @@ class RoomManager {
         }
       }
       session.owlPollByColor[color] = pcts;
+    } else if (lifelineType === 'parrot' && player.lifelines.parrot && session.questionType === 'estimation') {
+      player.lifelines.parrot = false;
+      const truth = eng.activeQuestion.answer;
+      const spread = 0.10 + Math.random() * 0.15;
+      session.parrotRangeByColor[color] = {
+        low: Math.max(0, Math.floor(truth * (1 - spread))),
+        high: Math.ceil(truth * (1 + spread))
+      };
+    } else if (lifelineType === 'telescope' && player.lifelines.telescope && session.questionType === 'estimation') {
+      player.lifelines.telescope = false;
+      // Reveal only AI opponents' guesses (never other humans' live answers)
+      session.telescopeByColor[color] = session.participants
+        .filter(pid => pid !== color && !eng.players[pid]?.isHuman)
+        .map(pid => ({ name: eng.players[pid].name, guess: session.submissions[pid]?.guess }))
+        .filter(g => g.guess != null);
     } else if (lifelineType === 'extraTime' && player.lifelines.extraTime) {
       player.lifelines.extraTime = false;
       session.deadlineAt += 10000;
@@ -706,6 +723,8 @@ class RoomManager {
         hasViewerSubmitted: viewerColor ? Boolean(s.submissions[viewerColor]) : false,
         viewerHalvedOptions: viewerColor ? s.halvedByColor[viewerColor] || null : null,
         viewerOwlPoll: viewerColor ? s.owlPollByColor[viewerColor] || null : null,
+        viewerParrotRange: viewerColor ? s.parrotRangeByColor[viewerColor] || null : null,
+        viewerTelescope: viewerColor ? s.telescopeByColor[viewerColor] || null : null,
         revealData: s.stage === 'REVEAL' ? s.revealData : null
       };
     }

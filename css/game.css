@@ -71,7 +71,7 @@ body.game-canvas {
   stroke: #5c3e1e;
   stroke-width: 1.8;
   stroke-linejoin: round;
-  transition: fill 0.22s ease, filter 0.2s ease, stroke-width 0.18s ease;
+  transition: fill 0.55s ease, filter 0.25s ease, stroke-width 0.18s ease;
   cursor: pointer;
 }
 
@@ -413,6 +413,12 @@ body.game-canvas {
   justify-content: center;
   padding: 16px;
   z-index: 100;
+  animation: overlayFadeIn 0.3s ease;
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .q-modal {
@@ -426,6 +432,18 @@ body.game-canvas {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  animation: modalSlideIn 0.38s cubic-bezier(0.22, 1.15, 0.36, 1);
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .q-modal__top {

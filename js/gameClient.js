@@ -576,7 +576,7 @@ function stepSoloFlow() {
           sound.playCastleBuild();
           stepSoloFlow();
         }
-      }, 650);
+      }, 1400);
     }
     return;
   }
@@ -601,7 +601,7 @@ function stepSoloFlow() {
           sound.playClaim();
           stepSoloFlow();
         }
-      }, 600);
+      }, 1300);
     }
     return;
   }
@@ -628,7 +628,7 @@ function stepSoloFlow() {
         renderAll();
         // AI battles are shown to the player as a spectator duel (never resolved invisibly)
         openLocalMcBattle();
-      }, 750);
+      }, 1600);
     }
     return;
   }
@@ -701,7 +701,7 @@ function openLocalEstimation(isTiebreaker, onComplete) {
 
   if (localSpectatorMode) {
     document.getElementById('estTimer').textContent = '⚔';
-    localTimerId = setTimeout(() => submitEstValue(), 3600);
+    localTimerId = setTimeout(() => submitEstValue(), 5200);
     return;
   }
 
@@ -827,9 +827,9 @@ function openLocalMcBattle() {
 
   if (localSpectatorMode) {
     // Spectator: keep the question on screen briefly, then reveal the AI duel result
-    localTimeLeft = 4;
+    localTimeLeft = 6;
     document.getElementById('mcTimer').textContent = '⚔';
-    localTimerId = setTimeout(() => submitMcChoice(-1), 3600);
+    localTimerId = setTimeout(() => submitMcChoice(-1), 5000);
     return;
   }
 

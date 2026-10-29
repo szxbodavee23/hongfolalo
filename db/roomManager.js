@@ -293,7 +293,7 @@ class RoomManager {
     if (!hasHumanParticipant) {
       room.questionTimer = setTimeout(() => {
         this.resolveQuestionSession(room);
-      }, 1100);
+      }, 2600);
       return;
     }
 
@@ -419,7 +419,7 @@ class RoomManager {
         this.scheduleAiTurnIfNeeded(room);
       };
       this.broadcastRoom(room);
-      room.revealTimer = setTimeout(() => this.finishRevealStage(room), 3800);
+      room.revealTimer = setTimeout(() => this.finishRevealStage(room), 4300);
       return;
     }
 
@@ -437,7 +437,7 @@ class RoomManager {
         this.scheduleAiTurnIfNeeded(room);
       };
       this.broadcastRoom(room);
-      room.revealTimer = setTimeout(() => this.finishRevealStage(room), 3800);
+      room.revealTimer = setTimeout(() => this.finishRevealStage(room), 4300);
       return;
     }
 
@@ -461,14 +461,14 @@ class RoomManager {
           this.startQuestionSession(room);
           this.broadcastRoom(room);
         };
-        room.revealTimer = setTimeout(() => this.finishRevealStage(room), 3200);
+        room.revealTimer = setTimeout(() => this.finishRevealStage(room), 3600);
       } else {
         session.onRevealFinish = () => {
           room.questionSession = null;
           eng.completeCurrentBattleTurn();
           this.advanceAfterBattleResolution(room);
         };
-        room.revealTimer = setTimeout(() => this.finishRevealStage(room), 3600);
+        room.revealTimer = setTimeout(() => this.finishRevealStage(room), 4200);
       }
       return;
     }
@@ -489,7 +489,7 @@ class RoomManager {
         this.advanceAfterBattleResolution(room);
       };
       this.broadcastRoom(room);
-      room.revealTimer = setTimeout(() => this.finishRevealStage(room), 4000);
+      room.revealTimer = setTimeout(() => this.finishRevealStage(room), 4600);
     }
   }
 
@@ -634,7 +634,7 @@ class RoomManager {
         eng.completeCurrentBattleTurn();
         this.checkGameOverOrAdvance(room);
       }
-    }, 950);
+    }, 1700);
   }
 
   async checkGameOverOrAdvance(room) {

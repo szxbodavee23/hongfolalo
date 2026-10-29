@@ -3,7 +3,9 @@
 let currentUser = null;
 let currentAuthToken = null;
 let sessionExpiryTimer = null;
-const SESSION_TTL_MS = 15 * 60 * 1000; // auto-logout 15 minutes after login
+let lastActivitySave = 0;
+const SESSION_TTL_MS = 15 * 60 * 1000; // auto-logout after 15 min of inactivity
+const ACTIVITY_SAVE_THROTTLE_MS = 10 * 1000;
 let registeredUsers = [];
 let adminQuestions = { pending: [], approved: [] };
 let adminUsers = [];
@@ -41,6 +43,7 @@ function getAuthHeaders(extra = {}) {
 async function initPortal() {
   loadUserFromStorage();
   bindPortalEvents();
+  bindActivityTracking();
   await syncPortalData();
   renderAuthGate();
   checkUrlQueryParams();
@@ -49,33 +52,58 @@ async function initPortal() {
 }
 
 function clearStoredSession() {
-  ['honfoglalo_user', 'honfoglalo_token', 'honfoglalo_login_at'].forEach(k => {
+  ['honfoglalo_user', 'honfoglalo_token', 'honfoglalo_login_at', 'honfoglalo_activity_at'].forEach(k => {
     sessionStorage.removeItem(k);
     localStorage.removeItem(k);
   });
 }
 
-function scheduleSessionExpiry(loginAt) {
+function getStoredActivityAt() {
+  return Number(
+    sessionStorage.getItem('honfoglalo_activity_at') ||
+    localStorage.getItem('honfoglalo_activity_at') || 0
+  );
+}
+
+function scheduleSessionExpiry(activityAt) {
   if (sessionExpiryTimer) clearTimeout(sessionExpiryTimer);
-  const remaining = SESSION_TTL_MS - (Date.now() - loginAt);
+  const remaining = SESSION_TTL_MS - (Date.now() - activityAt);
   if (remaining > 0) {
     sessionExpiryTimer = setTimeout(() => setLoggedInUser(null, null), remaining);
   }
+}
+
+// Sliding window: any interaction resets the 15-minute inactivity timer
+function onUserActivity() {
+  if (!currentUser) return;
+  const now = Date.now();
+  scheduleSessionExpiry(now);
+  if (now - lastActivitySave >= ACTIVITY_SAVE_THROTTLE_MS) {
+    lastActivitySave = now;
+    const isAdmin = Boolean(currentUser.isAdmin || currentUser.username === 'admin_user');
+    sessionStorage.setItem('honfoglalo_activity_at', String(now));
+    if (!isAdmin) localStorage.setItem('honfoglalo_activity_at', String(now));
+  }
+}
+
+function bindActivityTracking() {
+  ['click', 'keydown', 'mousemove', 'touchstart', 'scroll'].forEach(evt =>
+    window.addEventListener(evt, onUserActivity, { passive: true })
+  );
 }
 
 function loadUserFromStorage() {
   try {
     const raw = sessionStorage.getItem('honfoglalo_user') || localStorage.getItem('honfoglalo_user');
     const tok = sessionStorage.getItem('honfoglalo_token') || localStorage.getItem('honfoglalo_token');
-    const loginAt = Number(
-      sessionStorage.getItem('honfoglalo_login_at') || localStorage.getItem('honfoglalo_login_at') || 0
-    );
-    if (raw && loginAt && Date.now() - loginAt <= SESSION_TTL_MS) {
+    const activityAt = getStoredActivityAt();
+    if (raw && activityAt && Date.now() - activityAt <= SESSION_TTL_MS) {
       const parsed = JSON.parse(raw);
       if (parsed && parsed.username) {
         currentUser = parsed;
         currentAuthToken = tok || null;
-        scheduleSessionExpiry(loginAt);
+        lastActivitySave = activityAt;
+        scheduleSessionExpiry(activityAt);
         return;
       }
     }
@@ -98,13 +126,14 @@ function setLoggedInUser(user, authToken = null) {
     const now = String(Date.now());
     const isAdmin = Boolean(user.isAdmin || user.username === 'admin_user');
     // Admin session is tab-scoped only (sessionStorage) — survives refresh,
-    // dies with the tab; regular users also persist in localStorage (15 min cap either way)
+    // dies with the tab; regular users also persist in localStorage
     sessionStorage.setItem('honfoglalo_user', payload);
-    sessionStorage.setItem('honfoglalo_login_at', now);
+    sessionStorage.setItem('honfoglalo_activity_at', now);
     if (!isAdmin) {
       localStorage.setItem('honfoglalo_user', payload);
-      localStorage.setItem('honfoglalo_login_at', now);
+      localStorage.setItem('honfoglalo_activity_at', now);
     }
+    lastActivitySave = Date.now();
     if (authToken) {
       sessionStorage.setItem('honfoglalo_token', authToken);
       if (!isAdmin) localStorage.setItem('honfoglalo_token', authToken);

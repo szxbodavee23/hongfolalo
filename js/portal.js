@@ -5,7 +5,42 @@ let currentAuthToken = null;
 let sessionExpiryTimer = null;
 let lastActivitySave = 0;
 const SESSION_TTL_MS = 15 * 60 * 1000; // auto-logout after 15 min of inactivity
+const REMEMBER_TTL_MS = 30 * 24 * 60 * 60 * 1000; // "stay logged in" duration
 const ACTIVITY_SAVE_THROTTLE_MS = 10 * 1000;
+
+function isRememberedSession() {
+  return sessionStorage.getItem('honfoglalo_remember') === '1' || localStorage.getItem('honfoglalo_remember') === '1';
+}
+
+function getSessionTtl() {
+  return isRememberedSession() ? REMEMBER_TTL_MS : SESSION_TTL_MS;
+}
+
+// --- saved login credentials (browser-local, obfuscated — "jelszó megjegyzése") ---
+function saveLoginCredentials(username, password) {
+  try {
+    localStorage.setItem('honfoglalo_saved_login', JSON.stringify({
+      u: username,
+      p: btoa(unescape(encodeURIComponent(password)))
+    }));
+  } catch { /* storage unavailable */ }
+}
+
+function loadLoginCredentials() {
+  try {
+    const raw = localStorage.getItem('honfoglalo_saved_login');
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    if (!d || !d.u) return null;
+    return { username: d.u, password: decodeURIComponent(escape(atob(d.p || ''))) };
+  } catch {
+    return null;
+  }
+}
+
+function clearLoginCredentials() {
+  localStorage.removeItem('honfoglalo_saved_login');
+}
 let registeredUsers = [];
 let adminQuestions = { pending: [], approved: [] };
 let adminUsers = [];
@@ -52,7 +87,7 @@ async function initPortal() {
 }
 
 function clearStoredSession() {
-  ['honfoglalo_user', 'honfoglalo_token', 'honfoglalo_login_at', 'honfoglalo_activity_at'].forEach(k => {
+  ['honfoglalo_user', 'honfoglalo_token', 'honfoglalo_login_at', 'honfoglalo_activity_at', 'honfoglalo_remember'].forEach(k => {
     sessionStorage.removeItem(k);
     localStorage.removeItem(k);
   });
@@ -67,7 +102,7 @@ function getStoredActivityAt() {
 
 function scheduleSessionExpiry(activityAt) {
   if (sessionExpiryTimer) clearTimeout(sessionExpiryTimer);
-  const remaining = SESSION_TTL_MS - (Date.now() - activityAt);
+  const remaining = getSessionTtl() - (Date.now() - activityAt);
   if (remaining > 0) {
     sessionExpiryTimer = setTimeout(() => setLoggedInUser(null, null), remaining);
   }
@@ -82,7 +117,7 @@ function onUserActivity() {
     lastActivitySave = now;
     const isAdmin = Boolean(currentUser.isAdmin || currentUser.username === 'admin_user');
     sessionStorage.setItem('honfoglalo_activity_at', String(now));
-    if (!isAdmin) localStorage.setItem('honfoglalo_activity_at', String(now));
+    if (!isAdmin || isRememberedSession()) localStorage.setItem('honfoglalo_activity_at', String(now));
   }
 }
 
@@ -97,7 +132,7 @@ function loadUserFromStorage() {
     const raw = sessionStorage.getItem('honfoglalo_user') || localStorage.getItem('honfoglalo_user');
     const tok = sessionStorage.getItem('honfoglalo_token') || localStorage.getItem('honfoglalo_token');
     const activityAt = getStoredActivityAt();
-    if (raw && activityAt && Date.now() - activityAt <= SESSION_TTL_MS) {
+    if (raw && activityAt && Date.now() - activityAt <= getSessionTtl()) {
       const parsed = JSON.parse(raw);
       if (parsed && parsed.username) {
         currentUser = parsed;
@@ -116,7 +151,7 @@ function loadUserFromStorage() {
   }
 }
 
-function setLoggedInUser(user, authToken = null) {
+function setLoggedInUser(user, authToken = null, remember = false) {
   currentUser = user;
   currentAuthToken = authToken;
   clearStoredSession();
@@ -125,18 +160,20 @@ function setLoggedInUser(user, authToken = null) {
     const payload = JSON.stringify(user);
     const now = String(Date.now());
     const isAdmin = Boolean(user.isAdmin || user.username === 'admin_user');
-    // Admin session is tab-scoped only (sessionStorage) — survives refresh,
-    // dies with the tab; regular users also persist in localStorage
+    // Admin session is tab-scoped (sessionStorage) unless "stay logged in" was chosen;
+    // regular users persist in localStorage either way
     sessionStorage.setItem('honfoglalo_user', payload);
     sessionStorage.setItem('honfoglalo_activity_at', now);
-    if (!isAdmin) {
+    sessionStorage.setItem('honfoglalo_remember', remember ? '1' : '0');
+    if (!isAdmin || remember) {
       localStorage.setItem('honfoglalo_user', payload);
       localStorage.setItem('honfoglalo_activity_at', now);
+      localStorage.setItem('honfoglalo_remember', remember ? '1' : '0');
     }
     lastActivitySave = Date.now();
     if (authToken) {
       sessionStorage.setItem('honfoglalo_token', authToken);
-      if (!isAdmin) localStorage.setItem('honfoglalo_token', authToken);
+      if (!isAdmin || remember) localStorage.setItem('honfoglalo_token', authToken);
     }
     scheduleSessionExpiry(Date.now());
   }
@@ -189,8 +226,11 @@ function renderAuthGate() {
     guestSec.classList.remove('hidden');
     dashSec.classList.add('hidden');
     navUser.classList.add('hidden');
-    document.getElementById('loginUsername').value = '';
-    document.getElementById('loginPassword').value = '';
+    const saved = loadLoginCredentials();
+    document.getElementById('loginUsername').value = saved?.username || '';
+    document.getElementById('loginPassword').value = saved?.password || '';
+    const rememberCb = document.getElementById('loginRememberMe');
+    if (rememberCb) rememberCb.checked = Boolean(saved);
   } else {
     guestSec.classList.add('hidden');
     dashSec.classList.remove('hidden');
@@ -895,14 +935,14 @@ function bindPortalEvents() {
     e.preventDefault();
     const errEl = document.getElementById('loginError');
     errEl.classList.add('hidden');
+    const usernameVal = document.getElementById('loginUsername').value;
+    const passwordVal = document.getElementById('loginPassword').value;
+    const remember = Boolean(document.getElementById('loginRememberMe')?.checked);
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: document.getElementById('loginUsername').value,
-          password: document.getElementById('loginPassword').value
-        })
+        body: JSON.stringify({ username: usernameVal, password: passwordVal })
       });
       const data = await res.json();
       if (res.status === 403 && data.requiresVerification) {
@@ -910,7 +950,9 @@ function bindPortalEvents() {
         return;
       }
       if (!res.ok) throw new Error(data.error || 'Sikertelen belépés');
-      setLoggedInUser(data.user, data.authToken);
+      setLoggedInUser(data.user, data.authToken, remember);
+      if (remember) saveLoginCredentials(usernameVal, passwordVal);
+      else clearLoginCredentials();
       await syncPortalData();
     } catch (err) {
       errEl.style.background = '';

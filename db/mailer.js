@@ -87,8 +87,12 @@ async function deliverMail({ cleanEmail, username, subject, htmlBody, code, veri
         recordOutbox(cleanEmail, subject, code, verifyUrl, 'Elküldve (Resend API)');
         return { sent: true, provider: 'resend' };
       }
+      const errBody = await res.text().catch(() => '');
+      console.warn(`[Mailer] Resend API rejected (${res.status}): ${errBody.slice(0, 400)}`);
+      recordOutbox(cleanEmail, subject, code, verifyUrl, `Resend elutasítva (${res.status})`);
     } catch (err) {
       console.warn('[Mailer] Resend API error:', err.message);
+      recordOutbox(cleanEmail, subject, code, verifyUrl, 'Resend hálózati hiba');
     }
   }
 
@@ -113,8 +117,12 @@ async function deliverMail({ cleanEmail, username, subject, htmlBody, code, veri
         recordOutbox(cleanEmail, subject, code, verifyUrl, 'Elküldve (Brevo API)');
         return { sent: true, provider: 'brevo' };
       }
+      const errBody = await res.text().catch(() => '');
+      console.warn(`[Mailer] Brevo API rejected (${res.status}): ${errBody.slice(0, 400)}`);
+      recordOutbox(cleanEmail, subject, code, verifyUrl, `Brevo elutasítva (${res.status})`);
     } catch (err) {
       console.warn('[Mailer] Brevo API error:', err.message);
+      recordOutbox(cleanEmail, subject, code, verifyUrl, 'Brevo hálózati hiba');
     }
   }
 

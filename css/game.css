@@ -204,6 +204,18 @@ body.game-canvas {
   color: var(--text-muted);
 }
 
+.floating-phase__order {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--gold-bright);
+  border-left: 1px solid var(--gold-mid);
+  padding-left: 10px;
+  max-width: 340px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Floating Player Pills */
 .floating-players {
   display: flex;

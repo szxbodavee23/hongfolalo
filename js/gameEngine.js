@@ -700,6 +700,46 @@ export class HonfoglaloEngine {
   }
 
   completeCurrentBattleTurn() {
+    const battle = this.activeBattle;
+    // Chained siege: if the attacker destroyed a tower but the castle still stands,
+    // the same attacker keeps attacking until all towers fall or a question is missed.
+    const siegeContinues =
+      battle &&
+      battle.isBaseSiege &&
+      battle.outcome?.attackerWon &&
+      battle.outcome?.towerDestroyed &&
+      !battle.outcome?.baseConquered;
+
+    if (siegeContinues) {
+      const { attackerId, defenderId, targetCountyId } = battle;
+      const county = this.counties[targetCountyId];
+      const attacker = this.players[attackerId];
+      const defender = this.players[defenderId];
+
+      this.activeQuestion = this.drawMultipleChoiceQuestion();
+      this.activeQuestion.participants = [attackerId, defenderId];
+      this.activeQuestion.contextLabel = `${attacker.name} folytatja ${county.name} ostromát (${county.towers}/3 torony maradt)!`;
+
+      this.activeBattle = {
+        attackerId,
+        defenderId,
+        targetCountyId,
+        isBaseSiege: true,
+        towersBefore: county.towers,
+        siegeChain: (battle.siegeChain || 1) + 1,
+        mcResults: null,
+        tiebreakerResults: null,
+        outcome: null
+      };
+
+      this.phase = PHASES.BATTLE_MC_QUESTION;
+      this.logEvent(
+        `${attacker.name} nem adja fel az ostromot – újabb támadás ${defender.name} ${county.name} vára ellen (${county.towers} torony maradt)!`,
+        'battle'
+      );
+      return;
+    }
+
     this.activeBattle = null;
     const aliveIds = ['red', 'green', 'blue'].filter(id => !this.players[id].eliminated);
     if (aliveIds.length <= 1) {

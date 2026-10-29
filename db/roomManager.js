@@ -466,7 +466,7 @@ class RoomManager {
         session.onRevealFinish = () => {
           room.questionSession = null;
           eng.completeCurrentBattleTurn();
-          this.checkGameOverOrAdvance(room);
+          this.advanceAfterBattleResolution(room);
         };
         room.revealTimer = setTimeout(() => this.finishRevealStage(room), 3600);
       }
@@ -486,11 +486,22 @@ class RoomManager {
       session.onRevealFinish = () => {
         room.questionSession = null;
         eng.completeCurrentBattleTurn();
-        this.checkGameOverOrAdvance(room);
+        this.advanceAfterBattleResolution(room);
       };
       this.broadcastRoom(room);
       room.revealTimer = setTimeout(() => this.finishRevealStage(room), 4000);
     }
+  }
+
+  // After a battle resolves, a chained base siege may continue with a fresh question
+  advanceAfterBattleResolution(room) {
+    const eng = room.engine;
+    if (eng.phase === PHASES.BATTLE_MC_QUESTION && eng.activeBattle) {
+      this.startQuestionSession(room);
+      this.broadcastRoom(room);
+      return;
+    }
+    this.checkGameOverOrAdvance(room);
   }
 
   finishRevealStage(room) {
@@ -713,6 +724,9 @@ class RoomManager {
       },
       phase: eng.phase,
       currentSelector: eng.currentSelector,
+      selectionQueue: eng.selectionQueue || [],
+      battleTurnQueue: eng.battleTurnQueue || [],
+      currentBattleTurnIndex: eng.currentBattleTurnIndex || 0,
       currentBattleRound: eng.currentBattleRound,
       maxBattleRounds: eng.maxBattleRounds,
       players: eng.players,
@@ -722,6 +736,8 @@ class RoomManager {
             attackerId: eng.activeBattle.attackerId,
             defenderId: eng.activeBattle.defenderId,
             targetCountyId: eng.activeBattle.targetCountyId,
+            isBaseSiege: eng.activeBattle.isBaseSiege,
+            siegeChain: eng.activeBattle.siegeChain || 1,
             outcome: eng.activeBattle.outcome
           }
         : null,

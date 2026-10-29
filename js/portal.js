@@ -416,9 +416,25 @@ function disconnectLobby() {
   document.getElementById('lobbyActiveBox').classList.add('hidden');
 }
 
-function openGameInNewWindow(url, windowName = 'HonfoglaloGameWindow') {
+function shouldOpenInNewWindow() {
+  const stored = localStorage.getItem('honfoglalo_open_new_window');
+  return stored === null ? true : stored === '1';
+}
+
+function setNewWindowPreference(enabled) {
+  localStorage.setItem('honfoglalo_open_new_window', enabled ? '1' : '0');
+  document.querySelectorAll('.chk-new-window').forEach(cb => {
+    cb.checked = enabled;
+  });
+}
+
+function launchGame(url, windowName = 'HonfoglaloGameWindow') {
   if (currentUser && !currentUser.isAdmin) {
     localStorage.setItem('honfoglalo_user', JSON.stringify(currentUser));
+  }
+  if (!shouldOpenInNewWindow()) {
+    window.location.href = url;
+    return;
   }
   const features = 'width=1380,height=860,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
   const win = window.open(url, windowName, features);
@@ -520,12 +536,12 @@ function updateLobbyUI(state) {
   } else {
     btnStart.classList.add('hidden');
     btnReopen.classList.remove('hidden');
-    btnReopen.onclick = () => openGameInNewWindow(gameUrl, `Honfoglalo_${state.code}_${lobbySession.myColor}`);
+    btnReopen.onclick = () => launchGame(gameUrl, `Honfoglalo_${state.code}_${lobbySession.myColor}`);
     statusTxt.textContent = 'A játék elindult az új ablakban!';
 
     if (lobbySession.openedGameWindowForCode !== state.code) {
       lobbySession.openedGameWindowForCode = state.code;
-      openGameInNewWindow(gameUrl, `Honfoglalo_${state.code}_${lobbySession.myColor}`);
+      launchGame(gameUrl, `Honfoglalo_${state.code}_${lobbySession.myColor}`);
     }
   }
 }
@@ -929,6 +945,12 @@ function bindPortalEvents() {
     setLoggedInUser(null, null);
   });
 
+  // "Open game in new window" preference checkboxes (synced across panels)
+  document.querySelectorAll('.chk-new-window').forEach(cb => {
+    cb.checked = shouldOpenInNewWindow();
+    cb.addEventListener('change', () => setNewWindowPreference(cb.checked));
+  });
+
   // Dashboard navigation tabs
   document.querySelectorAll('.dash-tab').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1011,7 +1033,7 @@ function bindPortalEvents() {
     const diff = document.getElementById('soloDifficulty').value || 'normal';
     const rounds = document.getElementById('soloRounds').value || '6';
     const url = `/game.html?mode=ai&diff=${encodeURIComponent(diff)}&rounds=${encodeURIComponent(rounds)}`;
-    openGameInNewWindow(url, 'HonfoglaloSoloWindow');
+    launchGame(url, 'HonfoglaloSoloWindow');
   });
 
   // Player Submit Question Form (goes to pending)

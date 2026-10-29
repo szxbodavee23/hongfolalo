@@ -35,6 +35,7 @@ let localAnsweringColor = null;
 let localSubmissions = {};
 let localAfterEstCallback = null;
 let localIsTiebreakerEst = false;
+let localSpectatorMode = false;
 let soloAiBusy = false;
 
 async function initGameWindow() {
@@ -224,6 +225,10 @@ function renderHud() {
     ? engine.currentSelector === online.myColor
     : curPlayer?.isHuman;
 
+  const orderEl = document.getElementById('hudOrderText');
+  const nameOf = id => engine.players[id]?.name || id;
+  let orderStr = '';
+
   if (engine.phase === PHASES.BASE_QUESTION || engine.phase === PHASES.BASE_SELECTION) {
     badge.textContent = '1. FÁZIS • BÁZIS';
     roundInfo.textContent = 'Bázisválasztás';
@@ -233,6 +238,8 @@ function renderHud() {
         ? `${curPlayer.name}: Kattints egy szabad megyére a bázisod (1000p) felépítéséhez!`
         : `Várakozás: ${curPlayer.name} választ bázist...`
       : 'Tippelős kérdés a bázisválasztás sorrendjéért.';
+    const upcoming = (engine.selectionQueue || []).slice(0, 3).map(nameOf);
+    if (curPlayer) orderStr = `Soron: ${curPlayer.name}${upcoming.length ? ' • Utána: ' + upcoming.join(' → ') : ''}`;
   } else if (engine.phase === PHASES.EXPANSION_QUESTION || engine.phase === PHASES.EXPANSION_SELECTION) {
     badge.textContent = '2. FÁZIS • TERJESZKEDÉS';
     roundInfo.textContent = `${freeCount} szabad megye`;
@@ -242,6 +249,8 @@ function renderHud() {
         ? `${curPlayer.name}: Válassz egy sárgán kiemelt, szomszédos szabad megyét (+200p)!`
         : `Várakozás: ${curPlayer.name} foglal szabad megyét...`
       : 'Tippelős kérdés a szabad megyékért.';
+    const upcoming = (engine.selectionQueue || []).slice(0, 3).map(nameOf);
+    if (curPlayer) orderStr = `Soron: ${curPlayer.name}${upcoming.length ? ' • Utána: ' + upcoming.join(' → ') : ''}`;
   } else if (
     engine.phase === PHASES.BATTLE_SELECT_TARGET ||
     engine.phase === PHASES.BATTLE_MC_QUESTION ||
@@ -255,12 +264,19 @@ function renderHud() {
         ? `${curPlayer.name}: Kattints egy szomszédos ellenséges megyére a támadáshoz!`
         : `Várakozás: ${curPlayer.name} célpontot választ...`
       : 'Harci kérdéspárbaj folyamatban...';
+    const remaining = (engine.battleTurnQueue || []).slice(engine.currentBattleTurnIndex || 0).map(nameOf);
+    if (remaining.length) orderStr = `Támadási sorrend: ${remaining.join(' → ')}`;
   } else if (engine.phase === PHASES.GAME_OVER) {
     const w = engine.getStandings()[0];
     badge.textContent = 'MÉRKŐZÉS VÉGE';
     roundInfo.textContent = 'Befejezve';
     text.textContent = `Győztes: ${w.name}`;
     bottom.textContent = `A mérkőzést ${w.name} nyerte ${w.score} ponttal!`;
+  }
+
+  if (orderEl) {
+    orderEl.textContent = orderStr;
+    orderEl.classList.toggle('hidden', !orderStr);
   }
 
   // Render 3 Player HUD Cards
@@ -351,6 +367,9 @@ function applyOnlineState(state) {
   online.myColor = state.viewerColor || online.myColor;
   engine.phase = state.phase;
   engine.currentSelector = state.currentSelector;
+  engine.selectionQueue = state.selectionQueue || [];
+  engine.battleTurnQueue = state.battleTurnQueue || [];
+  engine.currentBattleTurnIndex = state.currentBattleTurnIndex || 0;
   engine.currentBattleRound = state.currentBattleRound;
   engine.maxBattleRounds = state.maxBattleRounds;
   engine.players = state.players;
@@ -607,33 +626,16 @@ function stepSoloFlow() {
           return;
         }
         renderAll();
-        const def = engine.players[engine.activeBattle.defenderId];
-        if (!att.isHuman && !def.isHuman) {
-          // Auto-resolve AI vs AI
-          const q = engine.activeQuestion;
-          const r = engine.submitBattleMcAnswers({
-            [attId]: engine.simulateAiMultipleChoice(q),
-            [def.id]: engine.simulateAiMultipleChoice(q)
-          });
-          if (r.status === 'TIEBREAKER') {
-            const eq = engine.activeQuestion;
-            engine.submitBattleTiebreakerAnswers({
-              [attId]: engine.simulateAiEstimation(eq),
-              [def.id]: engine.simulateAiEstimation(eq)
-            });
-          }
-          renderAll();
-          soloAiBusy = true;
-          setTimeout(() => {
-            soloAiBusy = false;
-            engine.completeCurrentBattleTurn();
-            stepSoloFlow();
-          }, 800);
-        } else {
-          openLocalMcBattle();
-        }
+        // AI battles are shown to the player as a spectator duel (never resolved invisibly)
+        openLocalMcBattle();
       }, 750);
     }
+    return;
+  }
+
+  // Chained base siege continues with a fresh duel (same attacker until a miss or all towers fall)
+  if (engine.phase === PHASES.BATTLE_MC_QUESTION && engine.activeBattle) {
+    openLocalMcBattle();
     return;
   }
 
@@ -648,29 +650,51 @@ function openLocalEstimation(isTiebreaker, onComplete) {
   localAfterEstCallback = onComplete;
   localSubmissions = {};
 
-  for (const pid of q.participants || ['red', 'green', 'blue']) {
+  const participants = q.participants || ['red', 'green', 'blue'];
+  for (const pid of participants) {
     if (!engine.players[pid]?.isHuman) {
       localSubmissions[pid] = engine.simulateAiEstimation(q);
     }
   }
 
-  localAnsweringColor = 'red';
+  // Spectator mode: the local player (red) is not a participant in this duel
+  localSpectatorMode = !participants.includes('red');
+  localAnsweringColor = localSpectatorMode ? null : 'red';
+
   document.getElementById('estCategory').textContent = q.category;
   document.getElementById('estContext').textContent = q.contextLabel || 'Tippelős kérdés';
   document.getElementById('estQuestionText').textContent = q.question;
   document.getElementById('estUnitText').textContent = q.unit || '';
-  document.getElementById('estStatusBanner').classList.add('hidden');
-  document.getElementById('estInputWrap').classList.remove('hidden');
   document.getElementById('estResultsWrap').classList.add('hidden');
+
+  const statusBanner = document.getElementById('estStatusBanner');
+  if (localSpectatorMode) {
+    const names = participants.map(pid => engine.players[pid]?.name || pid).join(' ⚔ ');
+    statusBanner.textContent = `Gépi tippelős párbaj folyamatban: ${names}`;
+    statusBanner.classList.remove('hidden');
+    document.getElementById('estInputWrap').classList.add('hidden');
+  } else {
+    statusBanner.classList.add('hidden');
+    document.getElementById('estInputWrap').classList.remove('hidden');
+  }
 
   const disp = document.getElementById('estInputDisplay');
   disp.value = '';
   document.getElementById('estimationOverlay').classList.remove('hidden');
-  setTimeout(() => disp.focus(), 50);
+  if (!localSpectatorMode) {
+    setTimeout(() => disp.focus(), 50);
+  }
 
   clearInterval(localTimerId);
-  localTimeLeft = 15;
   localStartMs = Date.now();
+
+  if (localSpectatorMode) {
+    document.getElementById('estTimer').textContent = '⚔';
+    localTimerId = setTimeout(() => submitEstValue(), 3600);
+    return;
+  }
+
+  localTimeLeft = 15;
   document.getElementById('estTimer').textContent = `${localTimeLeft} mp`;
 
   localTimerId = setInterval(() => {
@@ -698,12 +722,15 @@ function submitEstValue() {
   }
 
   clearInterval(localTimerId);
-  if (!localAnsweringColor) return;
-  localSubmissions[localAnsweringColor] = {
-    guess: parsed,
-    timeMs: Math.min(15000, Math.max(200, Date.now() - localStartMs))
-  };
-  localAnsweringColor = null;
+  clearTimeout(localTimerId);
+  if (!localSpectatorMode) {
+    if (!localAnsweringColor) return;
+    localSubmissions[localAnsweringColor] = {
+      guess: parsed,
+      timeMs: Math.min(15000, Math.max(200, Date.now() - localStartMs))
+    };
+    localAnsweringColor = null;
+  }
 
   if (localAfterEstCallback) {
     const cb = localAfterEstCallback;
@@ -740,6 +767,7 @@ function openLocalMcBattle() {
   const b = engine.activeBattle;
   const att = engine.players[b.attackerId];
   const def = engine.players[b.defenderId];
+  const county = engine.counties[b.targetCountyId];
 
   localSubmissions = {};
   for (const pid of [b.attackerId, b.defenderId]) {
@@ -747,31 +775,54 @@ function openLocalMcBattle() {
       localSubmissions[pid] = engine.simulateAiMultipleChoice(q);
     }
   }
-  localAnsweringColor = 'red';
+
+  // Spectator mode: AI-vs-AI duel stays visible, answers are auto-simulated
+  localSpectatorMode = !att.isHuman && !def.isHuman;
+  localAnsweringColor = localSpectatorMode ? null : 'red';
 
   document.getElementById('mcCategory').textContent = q.category;
-  document.getElementById('mcContext').textContent = `${engine.counties[b.targetCountyId].name} ostroma`;
+  const siegeInfo = b.isBaseSiege
+    ? ` • ${county.towers}/3 torony${(b.siegeChain || 1) > 1 ? ` • ${b.siegeChain}. támadás` : ''}`
+    : '';
+  document.getElementById('mcContext').textContent = `${county.name} ostroma${siegeInfo}`;
   document.getElementById('mcQuestionText').textContent = q.question;
   document.getElementById('mcDuelBar').innerHTML = `
     <span style="color:#fca5a5;">Támadó: ${att.name}</span>
     <span style="color:var(--text-muted);">VS</span>
     <span style="color:#93c5fd;">Védő: ${def.name}</span>
   `;
-  document.getElementById('mcStatusBanner').classList.add('hidden');
   document.getElementById('mcPollHint').classList.add('hidden');
   document.getElementById('mcSummaryBox').classList.add('hidden');
 
-  const p = engine.players.red;
-  document.getElementById('btnLifeHalve').disabled = !p.lifelines.halve;
-  document.getElementById('btnLifePoll').disabled = !p.lifelines.owl;
-  document.getElementById('btnLifeTime').disabled = !p.lifelines.extraTime;
+  const statusBanner = document.getElementById('mcStatusBanner');
+  if (localSpectatorMode) {
+    statusBanner.textContent = `Gépi párbaj folyamatban: ${att.name} ⚔ ${def.name}`;
+    statusBanner.classList.remove('hidden');
+  } else {
+    statusBanner.classList.add('hidden');
+  }
 
-  renderMcButtons(q.options, true, [], null);
+  const p = engine.players.red;
+  const canUseLifelines = !localSpectatorMode;
+  document.getElementById('btnLifeHalve').disabled = !canUseLifelines || !p.lifelines.halve;
+  document.getElementById('btnLifePoll').disabled = !canUseLifelines || !p.lifelines.owl;
+  document.getElementById('btnLifeTime').disabled = !canUseLifelines || !p.lifelines.extraTime;
+
+  renderMcButtons(q.options, !localSpectatorMode, [], null);
   document.getElementById('mcOverlay').classList.remove('hidden');
 
   clearInterval(localTimerId);
-  localTimeLeft = 15;
   localStartMs = Date.now();
+
+  if (localSpectatorMode) {
+    // Spectator: keep the question on screen briefly, then reveal the AI duel result
+    localTimeLeft = 4;
+    document.getElementById('mcTimer').textContent = '⚔';
+    localTimerId = setTimeout(() => submitMcChoice(-1), 3600);
+    return;
+  }
+
+  localTimeLeft = 15;
   document.getElementById('mcTimer').textContent = `${localTimeLeft} mp`;
 
   localTimerId = setInterval(() => {
@@ -821,12 +872,15 @@ function submitMcChoice(choiceIndex) {
   }
 
   clearInterval(localTimerId);
-  if (!localAnsweringColor) return;
-  localSubmissions[localAnsweringColor] = {
-    choiceIndex,
-    timeMs: Math.min(15000, Math.max(200, Date.now() - localStartMs))
-  };
-  localAnsweringColor = null;
+  clearTimeout(localTimerId);
+  if (!localSpectatorMode) {
+    if (!localAnsweringColor) return;
+    localSubmissions[localAnsweringColor] = {
+      choiceIndex,
+      timeMs: Math.min(15000, Math.max(200, Date.now() - localStartMs))
+    };
+    localAnsweringColor = null;
+  }
 
   const q = engine.activeQuestion;
   const b = engine.activeBattle;

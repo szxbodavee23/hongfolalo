@@ -1,6 +1,8 @@
-// Portal & Lobby Controller (index.html) – Registration Gate, Online Lobby, Question Submission & Admin Panel
+// Portal & Lobby Controller (index.html) – Hardened Auth, Email Verification, CAPTCHA & Admin Panel
 
 let currentUser = null;
+let currentAuthToken = null;
+let currentCaptchaToken = null;
 let registeredUsers = [];
 let adminQuestions = { pending: [], approved: [] };
 let adminUsers = [];
@@ -18,44 +20,104 @@ const lobbySession = {
   openedGameWindowForCode: null
 };
 
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function getAuthHeaders(extra = {}) {
+  const headers = { ...extra };
+  if (currentAuthToken) {
+    headers['Authorization'] = `Bearer ${currentAuthToken}`;
+  }
+  return headers;
+}
+
 async function initPortal() {
   loadUserFromStorage();
   bindPortalEvents();
   await syncPortalData();
   renderAuthGate();
-  checkInviteQueryParam();
+  checkUrlQueryParams();
   startInvitePolling();
 }
 
 function loadUserFromStorage() {
   try {
     const raw = sessionStorage.getItem('honfoglalo_user') || localStorage.getItem('honfoglalo_user');
+    const tok = sessionStorage.getItem('honfoglalo_token') || localStorage.getItem('honfoglalo_token');
     if (raw) {
       const parsed = JSON.parse(raw);
       // Never auto-restore admin_user from storage ("admin_user ne legyen elmentve")
       if (parsed && parsed.username !== 'admin_user' && !parsed.isAdmin) {
         currentUser = parsed;
+        currentAuthToken = tok || null;
       } else {
         sessionStorage.removeItem('honfoglalo_user');
         localStorage.removeItem('honfoglalo_user');
+        sessionStorage.removeItem('honfoglalo_token');
+        localStorage.removeItem('honfoglalo_token');
       }
     }
   } catch {
     currentUser = null;
+    currentAuthToken = null;
   }
 }
 
-function setLoggedInUser(user) {
+function setLoggedInUser(user, authToken = null) {
   currentUser = user;
-  // Only persist regular players; never save admin_user credentials/session in browser storage
+  currentAuthToken = authToken;
   if (user && !user.isAdmin && user.username !== 'admin_user') {
     sessionStorage.setItem('honfoglalo_user', JSON.stringify(user));
     localStorage.setItem('honfoglalo_user', JSON.stringify(user));
+    if (authToken) {
+      sessionStorage.setItem('honfoglalo_token', authToken);
+      localStorage.setItem('honfoglalo_token', authToken);
+    }
   } else {
     sessionStorage.removeItem('honfoglalo_user');
     localStorage.removeItem('honfoglalo_user');
+    sessionStorage.removeItem('honfoglalo_token');
+    localStorage.removeItem('honfoglalo_token');
   }
   renderAuthGate();
+}
+
+async function loadNewCaptcha() {
+  try {
+    const res = await fetch('/api/auth/captcha');
+    if (!res.ok) return;
+    const data = await res.json();
+    currentCaptchaToken = data.captchaToken;
+    const img = document.getElementById('captchaImg');
+    if (img) img.src = data.svgDataUri;
+    const ansInput = document.getElementById('regCaptchaAnswer');
+    if (ansInput) ansInput.value = '';
+  } catch {
+    // ignore
+  }
+}
+
+function openEmailVerificationView(emailAddress, customNotice = null) {
+  document.getElementById('loginForm').classList.add('hidden');
+  document.getElementById('registerForm').classList.add('hidden');
+  const vForm = document.getElementById('verifyEmailForm');
+  vForm.classList.remove('hidden');
+
+  document.getElementById('verifyEmailAddress').value = emailAddress || '';
+  document.getElementById('verifyCodeInput').value = '';
+  const errEl = document.getElementById('verifyError');
+  errEl.classList.add('hidden');
+
+  if (customNotice) {
+    document.getElementById('verifyEmailPromptText').textContent = customNotice;
+  }
+  setTimeout(() => document.getElementById('verifyCodeInput')?.focus(), 50);
 }
 
 function renderAuthGate() {
@@ -162,8 +224,8 @@ async function syncMySubmittedQuestions() {
 async function syncAdminData() {
   try {
     const [qRes, uRes] = await Promise.all([
-      fetch('/api/admin/questions'),
-      fetch('/api/admin/users')
+      fetch('/api/admin/questions', { headers: getAuthHeaders() }),
+      fetch('/api/admin/users', { headers: getAuthHeaders() })
     ]);
     if (qRes.ok) {
       adminQuestions = await qRes.json();
@@ -182,12 +244,24 @@ async function syncAdminData() {
   }
 }
 
-function checkInviteQueryParam() {
+function checkUrlQueryParams() {
   const params = new URLSearchParams(window.location.search);
   const room = params.get('room');
   if (room) {
     const codeInput = document.getElementById('joinCodeInput');
     if (codeInput) codeInput.value = room.trim().toUpperCase();
+  }
+  if (params.get('verified') === '1') {
+    const email = params.get('email') || '';
+    if (email) {
+      document.getElementById('loginUsername').value = email;
+    }
+    const errEl = document.getElementById('loginError');
+    errEl.style.background = 'rgba(46, 139, 71, 0.25)';
+    errEl.style.borderColor = '#2e8b47';
+    errEl.style.color = '#86efac';
+    errEl.textContent = 'E-mail címed sikeresen megerősítve! Most már bejelentkezhetsz.';
+    errEl.classList.remove('hidden');
   }
 }
 
@@ -206,7 +280,7 @@ function startInvitePolling() {
       if (inv) {
         pendingInvite = inv;
         document.getElementById('incomingInviteMessage').innerHTML =
-          `<strong>${inv.fromUsername}</strong> meghívott a(z) <strong>${inv.roomCode}</strong> online lobbyba!`;
+          `<strong>${escapeHtml(inv.fromUsername)}</strong> meghívott a(z) <strong>${escapeHtml(inv.roomCode)}</strong> online lobbyba!`;
         alertEl.classList.remove('hidden');
       } else {
         pendingInvite = null;
@@ -332,8 +406,7 @@ function disconnectLobby() {
 }
 
 function openGameInNewWindow(url, windowName = 'HonfoglaloGameWindow') {
-  // Ensure the new window has access to the current logged-in user via sessionStorage/localStorage
-  if (currentUser) {
+  if (currentUser && !currentUser.isAdmin) {
     localStorage.setItem('honfoglalo_user', JSON.stringify(currentUser));
   }
   const features = 'width=1380,height=860,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
@@ -368,7 +441,7 @@ function updateLobbyUI(state) {
     div.className = `slot-card slot-card--${color}`;
     div.innerHTML = `
       <div class="slot-card__role">${labels[color]} ${isMe ? '(Te)' : ''}</div>
-      <div class="slot-card__name">${s.name}</div>
+      <div class="slot-card__name">${escapeHtml(s.name)}</div>
       <div class="slot-card__status ${s.isHuman ? 'slot-card__status--online' : ''}">
         ${s.isHuman ? 'Csatlakozva' : 'Várakozás játékosra (vagy Gép)'}
       </div>
@@ -391,7 +464,7 @@ function updateLobbyUI(state) {
       const item = document.createElement('div');
       item.className = 'user-invite-item';
       const isInv = invitedLower.includes(u.username.toLowerCase());
-      item.innerHTML = `<span>${u.username}</span>`;
+      item.innerHTML = `<span>${escapeHtml(u.username)}</span>`;
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = `btn ${isInv ? 'btn--ghost' : 'btn--primary'} btn--xs`;
@@ -415,7 +488,7 @@ function updateLobbyUI(state) {
   chatBox.innerHTML = '';
   (state.chronicle || []).slice(0, 15).forEach(entry => {
     const row = document.createElement('div');
-    row.innerHTML = `<span style="color:var(--text-muted);">[${entry.time}]</span> ${entry.message}`;
+    row.innerHTML = `<span style="color:var(--text-muted);">[${escapeHtml(entry.time)}]</span> ${escapeHtml(entry.message)}`;
     chatBox.appendChild(row);
   });
 
@@ -459,11 +532,11 @@ function renderLeaderboardTable() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong>${idx + 1}.</strong></td>
-      <td><strong>${u.username}</strong></td>
-      <td>${u.games_won} / ${u.games_played}</td>
-      <td style="color:var(--accent-primary); font-weight:700;">${u.total_points} p</td>
-      <td>${u.counties_conquered}</td>
-      <td>${u.correct_answers} / ${u.total_answers}</td>
+      <td><strong>${escapeHtml(u.username)}</strong></td>
+      <td>${Number(u.games_won || 0)} / ${Number(u.games_played || 0)}</td>
+      <td style="color:var(--accent-primary); font-weight:700;">${Number(u.total_points || 0)} p</td>
+      <td>${Number(u.counties_conquered || 0)}</td>
+      <td>${Number(u.correct_answers || 0)} / ${Number(u.total_answers || 0)}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -480,10 +553,10 @@ function renderMatchesTable(matches) {
   matches.forEach(m => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><strong style="color:var(--accent-primary);">${m.winner_name}</strong></td>
-      <td>${m.red_player} (${m.red_score}p)</td>
-      <td>${m.green_player} (${m.green_score}p)</td>
-      <td>${m.blue_player} (${m.blue_score}p)</td>
+      <td><strong style="color:var(--accent-primary);">${escapeHtml(m.winner_name)}</strong></td>
+      <td>${escapeHtml(m.red_player)} (${Number(m.red_score || 0)}p)</td>
+      <td>${escapeHtml(m.green_player)} (${Number(m.green_score || 0)}p)</td>
+      <td>${escapeHtml(m.blue_player)} (${Number(m.blue_score || 0)}p)</td>
     `;
     tbody.appendChild(tr);
   });
@@ -507,10 +580,10 @@ function renderMySubmittedQuestions() {
     card.innerHTML = `
       <div>
         <div style="font-size:0.74rem; color:var(--accent-primary); font-weight:700;">
-          ${q.category} • ${q.qType === 'estimation' ? 'Tippelős' : 'Feleletválasztós'}
+          ${escapeHtml(q.category)} • ${q.qType === 'estimation' ? 'Tippelős' : 'Feleletválasztós'}
         </div>
-        <div style="font-weight:600; margin:2px 0;">${q.question}</div>
-        <div style="font-size:0.78rem; color:var(--text-secondary);">Helyes válasz: ${ans}</div>
+        <div style="font-weight:600; margin:2px 0;">${escapeHtml(q.question)}</div>
+        <div style="font-size:0.78rem; color:var(--text-secondary);">Helyes válasz: ${escapeHtml(ans)}</div>
       </div>
       <span class="tag ${isApproved ? 'tag--accent' : ''}">
         ${isApproved ? 'Elfogadva' : 'Jóváhagyásra vár'}
@@ -536,15 +609,15 @@ function renderAdminPendingQuestions() {
     const card = document.createElement('div');
     card.className = 'q-card';
     const ans = q.qType === 'estimation'
-      ? `Pontos válasz: <strong>${q.answer} ${q.unit || ''}</strong>`
-      : `Helyes: <strong>${q.options?.[q.correctIndex] || ''}</strong> | Opciók: ${(q.options || []).join(', ')}`;
+      ? `Pontos válasz: <strong>${escapeHtml(q.answer)} ${escapeHtml(q.unit || '')}</strong>`
+      : `Helyes: <strong>${escapeHtml(q.options?.[q.correctIndex] || '')}</strong> | Opciók: ${(q.options || []).map(escapeHtml).join(', ')}`;
 
     card.innerHTML = `
       <div>
         <div style="font-size:0.75rem; color:var(--accent-primary); font-weight:700;">
-          Beküldő: ${q.createdBy} • ${q.category} • ${q.qType === 'estimation' ? 'Tippelős' : 'Feleletválasztós'}
+          Beküldő: ${escapeHtml(q.createdBy)} • ${escapeHtml(q.category)} • ${q.qType === 'estimation' ? 'Tippelős' : 'Feleletválasztós'}
         </div>
-        <div style="font-weight:700; font-size:0.95rem; margin:3px 0;">${q.question}</div>
+        <div style="font-weight:700; font-size:0.95rem; margin:3px 0;">${escapeHtml(q.question)}</div>
         <div style="font-size:0.8rem; color:var(--text-secondary);">${ans}</div>
       </div>
       <div style="display:flex; gap:8px; flex-shrink:0;">
@@ -554,12 +627,18 @@ function renderAdminPendingQuestions() {
     `;
 
     card.querySelector('[data-approve]').onclick = async () => {
-      await fetch(`/api/admin/questions/${q.dbId}/approve`, { method: 'POST' });
+      await fetch(`/api/admin/questions/${q.dbId}/approve`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      });
       await syncPortalData();
     };
 
     card.querySelector('[data-reject]').onclick = async () => {
-      await fetch(`/api/admin/questions/${q.dbId}`, { method: 'DELETE' });
+      await fetch(`/api/admin/questions/${q.dbId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
       await syncPortalData();
     };
 
@@ -588,10 +667,10 @@ function renderAdminApprovedQuestions() {
     card.innerHTML = `
       <div>
         <div style="font-size:0.72rem; color:var(--accent-primary); font-weight:700;">
-          #${q.dbId} • ${q.category} • ${q.qType === 'estimation' ? 'Tippelős' : 'Feleletválasztós'} (Beküldő: ${q.createdBy})
+          #${q.dbId} • ${escapeHtml(q.category)} • ${q.qType === 'estimation' ? 'Tippelős' : 'Feleletválasztós'} (Beküldő: ${escapeHtml(q.createdBy)})
         </div>
-        <div style="font-weight:600; margin:2px 0;">${q.question}</div>
-        <div style="font-size:0.78rem; color:var(--text-secondary);">Válasz: ${ans}</div>
+        <div style="font-weight:600; margin:2px 0;">${escapeHtml(q.question)}</div>
+        <div style="font-size:0.78rem; color:var(--text-secondary);">Válasz: ${escapeHtml(ans)}</div>
       </div>
     `;
     const del = document.createElement('button');
@@ -599,7 +678,10 @@ function renderAdminApprovedQuestions() {
     del.className = 'btn btn--ghost btn--xs';
     del.textContent = 'Törlés';
     del.onclick = async () => {
-      await fetch(`/api/admin/questions/${q.dbId}`, { method: 'DELETE' });
+      await fetch(`/api/admin/questions/${q.dbId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
       await syncPortalData();
     };
     card.appendChild(del);
@@ -619,16 +701,24 @@ function renderAdminUsersTable() {
 
   adminUsers.forEach(u => {
     const tr = document.createElement('tr');
+    const verifiedBadge = u.email_verified
+      ? '<span style="color:#6ee7b7; font-size:0.76rem; font-weight:700;">✓ Megerősítve</span>'
+      : `<span style="color:#fcd34d; font-size:0.76rem; font-weight:700;">⏳ Függőben (Kód: ${escapeHtml(u.verification_code || '–')})</span>`;
+
     tr.innerHTML = `
       <td>#${u.id}</td>
-      <td><strong>${u.username}</strong></td>
-      <td>${u.email}</td>
-      <td>${u.games_won} / ${u.games_played}</td>
+      <td><strong>${escapeHtml(u.username)}</strong></td>
       <td>
-        <input type="number" class="input input--sm" value="${u.total_points}" style="width:100px;" data-pts-input="${u.id}" />
+        <div>${escapeHtml(u.email)}</div>
+        <div>${verifiedBadge}</div>
+      </td>
+      <td>${Number(u.games_won || 0)} / ${Number(u.games_played || 0)}</td>
+      <td>
+        <input type="number" class="input input--sm" value="${Number(u.total_points || 0)}" style="width:100px;" data-pts-input="${u.id}" />
       </td>
       <td>
         <div style="display:flex; flex-wrap:wrap; gap:6px;">
+          ${!u.email_verified ? `<button type="button" class="btn btn--primary btn--xs" data-verify-user="${u.id}">E-mail jóváhagyása</button>` : ''}
           <button type="button" class="btn btn--secondary btn--xs" data-save-pts="${u.id}">Pont mentése</button>
           <button type="button" class="btn btn--secondary btn--xs" data-reset-pw="${u.id}">Új jelszó</button>
           <button type="button" class="btn btn--ghost btn--xs" data-reset-stats="${u.id}">Nullázás</button>
@@ -637,11 +727,23 @@ function renderAdminUsersTable() {
       </td>
     `;
 
+    const verifyBtn = tr.querySelector(`[data-verify-user="${u.id}"]`);
+    if (verifyBtn) {
+      verifyBtn.onclick = async () => {
+        await fetch(`/api/admin/users/${u.id}`, {
+          method: 'PATCH',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ verifyEmail: true })
+        });
+        await syncPortalData();
+      };
+    }
+
     tr.querySelector(`[data-save-pts="${u.id}"]`).onclick = async () => {
       const val = Number(tr.querySelector(`[data-pts-input="${u.id}"]`).value || 0);
       await fetch(`/api/admin/users/${u.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ totalPoints: val })
       });
       await syncPortalData();
@@ -652,7 +754,7 @@ function renderAdminUsersTable() {
       if (!newPassword || newPassword.length < 4) return;
       await fetch(`/api/admin/users/${u.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ newPassword })
       });
       await syncPortalData();
@@ -661,14 +763,17 @@ function renderAdminUsersTable() {
     tr.querySelector(`[data-reset-stats="${u.id}"]`).onclick = async () => {
       await fetch(`/api/admin/users/${u.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ resetStats: true })
       });
       await syncPortalData();
     };
 
     tr.querySelector(`[data-del-user="${u.id}"]`).onclick = async () => {
-      await fetch(`/api/admin/users/${u.id}`, { method: 'DELETE' });
+      await fetch(`/api/admin/users/${u.id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
       await syncPortalData();
     };
 
@@ -682,12 +787,14 @@ function bindPortalEvents() {
   const tabReg = document.getElementById('tabRegisterBtn');
   const loginForm = document.getElementById('loginForm');
   const regForm = document.getElementById('registerForm');
+  const verifyForm = document.getElementById('verifyEmailForm');
 
   tabLogin.addEventListener('click', () => {
     tabLogin.classList.add('active');
     tabReg.classList.remove('active');
     loginForm.classList.remove('hidden');
     regForm.classList.add('hidden');
+    verifyForm.classList.add('hidden');
   });
 
   tabReg.addEventListener('click', () => {
@@ -695,6 +802,14 @@ function bindPortalEvents() {
     tabLogin.classList.remove('active');
     regForm.classList.remove('hidden');
     loginForm.classList.add('hidden');
+    verifyForm.classList.add('hidden');
+    loadNewCaptcha();
+  });
+
+  document.getElementById('btnReloadCaptcha')?.addEventListener('click', loadNewCaptcha);
+
+  document.getElementById('btnBackToLogin')?.addEventListener('click', () => {
+    tabLogin.click();
   });
 
   loginForm.addEventListener('submit', async e => {
@@ -711,10 +826,17 @@ function bindPortalEvents() {
         })
       });
       const data = await res.json();
+      if (res.status === 403 && data.requiresVerification) {
+        openEmailVerificationView(data.email, data.error);
+        return;
+      }
       if (!res.ok) throw new Error(data.error || 'Sikertelen belépés');
-      setLoggedInUser(data.user);
+      setLoggedInUser(data.user, data.authToken);
       await syncPortalData();
     } catch (err) {
+      errEl.style.background = '';
+      errEl.style.borderColor = '';
+      errEl.style.color = '';
       errEl.textContent = err.message;
       errEl.classList.remove('hidden');
     }
@@ -731,13 +853,64 @@ function bindPortalEvents() {
         body: JSON.stringify({
           username: document.getElementById('regUsername').value,
           email: document.getElementById('regEmail').value,
-          password: document.getElementById('regPassword').value
+          password: document.getElementById('regPassword').value,
+          captchaToken: currentCaptchaToken,
+          captchaAnswer: document.getElementById('regCaptchaAnswer').value,
+          website: document.getElementById('regWebsiteHoneypot').value
         })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Sikertelen regisztráció');
-      setLoggedInUser(data.user);
+      if (!res.ok) {
+        await loadNewCaptcha();
+        throw new Error(data.error || 'Sikertelen regisztráció');
+      }
+
+      const notice = data.emailSent
+        ? `Elküldtük a 6 jegyű megerősítő kódot a(z) ${data.email} címre. Kérlek írd be alább:`
+        : `Fiók létrehozva (${data.email}). Írd be a 6 jegyű megerősítő kódot (vagy kérj jóváhagyást az admintól):`;
+      openEmailVerificationView(data.email, notice);
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.classList.remove('hidden');
+    }
+  });
+
+  verifyForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const errEl = document.getElementById('verifyError');
+    errEl.classList.add('hidden');
+    try {
+      const res = await fetch('/api/auth/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: document.getElementById('verifyEmailAddress').value,
+          code: document.getElementById('verifyCodeInput').value
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Hibás kód');
+      setLoggedInUser(data.user, data.authToken);
       await syncPortalData();
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.classList.remove('hidden');
+    }
+  });
+
+  document.getElementById('btnResendVerifyCode')?.addEventListener('click', async () => {
+    const email = document.getElementById('verifyEmailAddress').value;
+    const errEl = document.getElementById('verifyError');
+    errEl.classList.add('hidden');
+    try {
+      const res = await fetch('/api/auth/resend-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Hiba az újraküldéskor');
+      document.getElementById('verifyEmailPromptText').textContent = 'Új 6 jegyű megerősítő kódot küldtünk az e-mail címedre!';
     } catch (err) {
       errEl.textContent = err.message;
       errEl.classList.remove('hidden');
@@ -746,7 +919,7 @@ function bindPortalEvents() {
 
   document.getElementById('btnLogout').addEventListener('click', () => {
     disconnectLobby();
-    setLoggedInUser(null);
+    setLoggedInUser(null, null);
   });
 
   // Dashboard navigation tabs
@@ -869,7 +1042,7 @@ function bindPortalEvents() {
     try {
       const res = await fetch('/api/questions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload)
       });
       const data = await res.json();
@@ -933,7 +1106,7 @@ function bindPortalEvents() {
     try {
       const res = await fetch('/api/questions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload)
       });
       const data = await res.json();

@@ -700,6 +700,7 @@ export class HonfoglaloEngine {
   }
 
   completeCurrentBattleTurn() {
+    this.activeBattle = null;
     const aliveIds = ['red', 'green', 'blue'].filter(id => !this.players[id].eliminated);
     if (aliveIds.length <= 1) {
       this.finishGame();

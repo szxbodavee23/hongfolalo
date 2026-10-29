@@ -96,23 +96,58 @@
           <button type="submit" class="btn btn--primary btn--block">Bejelentkezés</button>
         </form>
 
-        <!-- Register Form -->
+        <!-- Register Form (With Anti-Bot CAPTCHA & Honeypot) -->
         <form id="registerForm" class="auth-form hidden" autocomplete="off">
-          <p class="auth-form__sub">Regisztrálj új játékos fiókot az adatbázisba.</p>
+          <p class="auth-form__sub">Regisztrálj új játékos fiókot (e-mail megerősítés szükséges).</p>
+
+          <!-- Anti-bot Honeypot field (hidden from real humans) -->
+          <input type="text" id="regWebsiteHoneypot" name="website" class="hidden" tabindex="-1" autocomplete="off" />
+
           <div class="field">
             <label for="regUsername">Felhasználónév</label>
             <input type="text" id="regUsername" class="input" placeholder="pl. kovacs_peter" minlength="2" maxlength="24" autocomplete="off" required />
           </div>
           <div class="field">
-            <label for="regEmail">E-mail cím</label>
+            <label for="regEmail">Valós E-mail cím (ide küldjük a megerősítő kódot)</label>
             <input type="email" id="regEmail" class="input" placeholder="peter@pelda.hu" autocomplete="off" required />
           </div>
           <div class="field">
             <label for="regPassword">Jelszó (min. 4 karakter)</label>
             <input type="password" id="regPassword" class="input" placeholder="••••••••" minlength="4" autocomplete="new-password" required />
           </div>
+
+          <div class="field">
+            <label for="regCaptchaAnswer">Bot elleni védelem – Mennyi a művelet eredménye?</label>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <img id="captchaImg" alt="CAPTCHA" style="height:44px; border-radius:8px; border:1px solid var(--border-subtle);" />
+              <input type="number" id="regCaptchaAnswer" class="input" placeholder="Eredmény" style="flex:1;" required />
+              <button type="button" class="btn btn--ghost btn--sm" id="btnReloadCaptcha" title="Új feladvány">↻</button>
+            </div>
+          </div>
+
           <div class="alert alert--error hidden" id="regError"></div>
-          <button type="submit" class="btn btn--primary btn--block">Regisztráció</button>
+          <button type="submit" class="btn btn--primary btn--block">Regisztráció és Kód Küldése</button>
+        </form>
+
+        <!-- Email Verification Form (6-digit code) -->
+        <form id="verifyEmailForm" class="auth-form hidden" autocomplete="off">
+          <p class="auth-form__sub" id="verifyEmailPromptText">
+            Elküldtük a 6 jegyű megerősítő kódot az e-mail címedre. Kérlek írd be alább a fiók aktiválásához:
+          </p>
+          <div class="field">
+            <label for="verifyEmailAddress">E-mail cím</label>
+            <input type="email" id="verifyEmailAddress" class="input" readonly />
+          </div>
+          <div class="field">
+            <label for="verifyCodeInput">6 jegyű megerősítő kód</label>
+            <input type="text" id="verifyCodeInput" class="input input--code" placeholder="123456" maxlength="6" inputmode="numeric" required />
+          </div>
+          <div class="alert alert--error hidden" id="verifyError"></div>
+          <button type="submit" class="btn btn--primary btn--block">E-mail Megerősítése és Belépés</button>
+          <div style="display:flex; justify-content:space-between; margin-top:12px;">
+            <button type="button" class="btn btn--ghost btn--xs" id="btnResendVerifyCode">Új kód küldése</button>
+            <button type="button" class="btn btn--ghost btn--xs" id="btnBackToLogin">Vissza a belépéshez</button>
+          </div>
         </form>
       </div>
     </section>
@@ -509,7 +544,7 @@
                 <tr>
                   <th>ID</th>
                   <th>Felhasználónév</th>
-                  <th>E-mail</th>
+                  <th>E-mail & Státusz</th>
                   <th>Meccsek (Győzelem)</th>
                   <th>Összpontszám</th>
                   <th>Műveletek</th>

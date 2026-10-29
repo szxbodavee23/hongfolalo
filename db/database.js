@@ -12,7 +12,26 @@ const __dirname = path.dirname(__filename);
 const { Pool } = pg;
 
 export function hashPassword(password) {
-  return crypto.createHash('sha256').update(String(password) + '_honfoglalo_salt').digest('hex');
+  const salt = crypto.randomBytes(16).toString('hex');
+  const derived = crypto.scryptSync(String(password), salt, 64).toString('hex');
+  return `scrypt$${salt}$${derived}`;
+}
+
+export function verifyPassword(password, storedHash) {
+  if (!storedHash) return false;
+  if (String(storedHash).startsWith('scrypt$')) {
+    const [, salt, keyHex] = String(storedHash).split('$');
+    if (!salt || !keyHex) return false;
+    const derived = crypto.scryptSync(String(password), salt, 64);
+    const keyBuf = Buffer.from(keyHex, 'hex');
+    return derived.length === keyBuf.length && crypto.timingSafeEqual(derived, keyBuf);
+  }
+  const legacyHash = crypto.createHash('sha256').update(String(password) + '_honfoglalo_salt').digest('hex');
+  return legacyHash === storedHash;
+}
+
+export function generateVerificationCode() {
+  return String(crypto.randomInt(100000, 999999));
 }
 
 const ADMIN_USERNAME = 'admin_user';
@@ -54,24 +73,34 @@ class DatabaseService {
           if (!countRes.rows[0].tbl) {
             const sql = fs.readFileSync(initSqlPath, 'utf8');
             await client.query(sql);
+          } else {
+            const qCnt = await client.query('SELECT COUNT(*)::int AS cnt FROM questions');
+            if (qCnt.rows[0].cnt < 1000) {
+              const sql = fs.readFileSync(initSqlPath, 'utf8');
+              await client.query(sql);
+            }
           }
         }
 
-        // Ensure role column on users and status column on questions
+        // Ensure role & email verification columns on users and status column on questions
         await client.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(16) DEFAULT 'user'");
+        await client.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE");
+        await client.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code VARCHAR(16)");
+        await client.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_expires_at TIMESTAMP");
         await client.query("ALTER TABLE questions ADD COLUMN IF NOT EXISTS status VARCHAR(16) DEFAULT 'approved'");
         await client.query("UPDATE questions SET status = 'approved' WHERE status IS NULL");
 
         // Remove any previously seeded default/test accounts so only admin_user + real registered users exist
         await client.query("DELETE FROM users WHERE email LIKE '%@honfoglalo.hu' OR email LIKE '%@example.com'");
 
-        // Ensure admin_user (#xEfO123) exists with admin role
+        // Ensure admin_user (#xEfO123) exists with admin role and email_verified = true
         await client.query(
-          `INSERT INTO users (username, email, password_hash, role)
-           VALUES ($1, 'admin@system.local', $2, 'admin')
+          `INSERT INTO users (username, email, password_hash, role, email_verified)
+           VALUES ($1, 'admin@system.local', $2, 'admin', TRUE)
            ON CONFLICT (username) DO UPDATE
            SET password_hash = EXCLUDED.password_hash,
-               role = 'admin'`,
+               role = 'admin',
+               email_verified = TRUE`,
           [ADMIN_USERNAME, ADMIN_PASSWORD_HASH]
         );
 
@@ -143,32 +172,27 @@ class DatabaseService {
       );
     `);
 
-    try {
-      this.sqlite.exec("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'");
-    } catch {
-      // column already exists
-    }
-    try {
-      this.sqlite.exec("ALTER TABLE questions ADD COLUMN status TEXT DEFAULT 'approved'");
-    } catch {
-      // column already exists
-    }
+    try { this.sqlite.exec("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'"); } catch {}
+    try { this.sqlite.exec("ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0"); } catch {}
+    try { this.sqlite.exec("ALTER TABLE users ADD COLUMN verification_code TEXT"); } catch {}
+    try { this.sqlite.exec("ALTER TABLE users ADD COLUMN verification_expires_at TEXT"); } catch {}
+    try { this.sqlite.exec("ALTER TABLE questions ADD COLUMN status TEXT DEFAULT 'approved'"); } catch {}
 
     this.sqlite.exec("DELETE FROM users WHERE email LIKE '%@honfoglalo.hu' OR email LIKE '%@example.com'");
 
     const existingAdmin = this.sqlite.prepare('SELECT id FROM users WHERE username = ?').get(ADMIN_USERNAME);
     if (!existingAdmin) {
       this.sqlite
-        .prepare("INSERT INTO users (username, email, password_hash, role) VALUES (?, 'admin@system.local', ?, 'admin')")
+        .prepare("INSERT INTO users (username, email, password_hash, role, email_verified) VALUES (?, 'admin@system.local', ?, 'admin', 1)")
         .run(ADMIN_USERNAME, ADMIN_PASSWORD_HASH);
     } else {
       this.sqlite
-        .prepare("UPDATE users SET password_hash = ?, role = 'admin' WHERE username = ?")
+        .prepare("UPDATE users SET password_hash = ?, role = 'admin', email_verified = 1 WHERE username = ?")
         .run(ADMIN_PASSWORD_HASH, ADMIN_USERNAME);
     }
 
     const qCount = this.sqlite.prepare('SELECT COUNT(*) AS cnt FROM questions').get().cnt;
-    if (qCount === 0) {
+    if (qCount < 1000) {
       const insertQ = this.sqlite.prepare(`
         INSERT OR IGNORE INTO questions (external_id, question_type, category, question_text, options_json, correct_index, estimation_answer, unit, difficulty, status)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved')
@@ -417,7 +441,7 @@ class DatabaseService {
   }
 
   async getAllUsersForAdmin() {
-    const cols = 'id, username, email, role, games_played, games_won, total_points, counties_conquered, correct_answers, total_answers, created_at';
+    const cols = 'id, username, email, role, email_verified, verification_code, games_played, games_won, total_points, counties_conquered, correct_answers, total_answers, created_at';
     if (this.mode === 'postgres-docker') {
       const res = await this.pool.query(
         `SELECT ${cols} FROM users WHERE username != $1 ORDER BY id DESC`,
@@ -434,6 +458,20 @@ class DatabaseService {
   async updateUserByAdmin(userId, payload) {
     const id = Number(userId);
     if (!Number.isFinite(id)) throw new Error('Érvénytelen felhasználó azonosító');
+
+    if (payload.verifyEmail) {
+      if (this.mode === 'postgres-docker') {
+        await this.pool.query(
+          'UPDATE users SET email_verified = TRUE, verification_code = NULL WHERE id = $1 AND username != $2',
+          [id, ADMIN_USERNAME]
+        );
+      } else {
+        this.sqlite
+          .prepare('UPDATE users SET email_verified = 1, verification_code = NULL WHERE id = ? AND username != ?')
+          .run(id, ADMIN_USERNAME);
+      }
+      return { updated: true, id };
+    }
 
     if (payload.resetStats) {
       if (this.mode === 'postgres-docker') {
@@ -495,11 +533,17 @@ class DatabaseService {
     if (cleanUser.toLowerCase() === ADMIN_USERNAME) {
       throw new Error('Ez a felhasználónév fenntartott!');
     }
-    if (cleanUser.length < 2) throw new Error('A felhasználónév legalább 2 karakter legyen!');
-    if (!cleanEmail.includes('@')) throw new Error('Kérlek adj meg egy érvényes e-mail címet!');
+    if (!/^[a-zA-Z0-9_áéíóöőúüűÁÉÍÓÖŐÚÜŰ\- ]{2,24}$/.test(cleanUser)) {
+      throw new Error('A felhasználónév 2–24 karakter hosszú lehet és nem tartalmazhat speciális HTML jeleket!');
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      throw new Error('Kérlek adj meg egy érvényes e-mail címet!');
+    }
     if (pw.length < 4) throw new Error('A jelszó legalább 4 karakter legyen!');
 
     const pwHash = hashPassword(pw);
+    const verificationCode = generateVerificationCode();
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
     if (this.mode === 'postgres-docker') {
       const existing = await this.pool.query(
@@ -510,12 +554,12 @@ class DatabaseService {
         throw new Error('Ez a felhasználónév vagy e-mail cím már foglalt!');
       }
       const res = await this.pool.query(
-        `INSERT INTO users (username, email, password_hash, role, avatar_color)
-         VALUES ($1, $2, $3, 'user', $4)
-         RETURNING id, username, email, role, avatar_color, games_played, games_won, total_points, counties_conquered, correct_answers, total_answers`,
-        [cleanUser, cleanEmail, pwHash, avatarColor]
+        `INSERT INTO users (username, email, password_hash, role, avatar_color, email_verified, verification_code, verification_expires_at)
+         VALUES ($1, $2, $3, 'user', $4, FALSE, $5, $6)
+         RETURNING id, username, email, role, avatar_color, email_verified, games_played, games_won, total_points, counties_conquered, correct_answers, total_answers`,
+        [cleanUser, cleanEmail, pwHash, avatarColor, verificationCode, expiresAt]
       );
-      return res.rows[0];
+      return { user: res.rows[0], verificationCode };
     } else {
       const existing = this.sqlite
         .prepare('SELECT id FROM users WHERE LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)')
@@ -524,45 +568,140 @@ class DatabaseService {
         throw new Error('Ez a felhasználónév vagy e-mail cím már foglalt!');
       }
       const info = this.sqlite
-        .prepare("INSERT INTO users (username, email, password_hash, role, avatar_color) VALUES (?, ?, ?, 'user', ?)")
-        .run(cleanUser, cleanEmail, pwHash, avatarColor);
-      return this.sqlite
-        .prepare('SELECT id, username, email, role, avatar_color, games_played, games_won, total_points, counties_conquered, correct_answers, total_answers FROM users WHERE id = ?')
+        .prepare(
+          "INSERT INTO users (username, email, password_hash, role, avatar_color, email_verified, verification_code, verification_expires_at) VALUES (?, ?, ?, 'user', ?, 0, ?, ?)"
+        )
+        .run(cleanUser, cleanEmail, pwHash, avatarColor, verificationCode, expiresAt);
+      const user = this.sqlite
+        .prepare('SELECT id, username, email, role, avatar_color, email_verified, games_played, games_won, total_points, counties_conquered, correct_answers, total_answers FROM users WHERE id = ?')
         .get(info.lastInsertRowid);
+      return { user, verificationCode };
+    }
+  }
+
+  async verifyUserEmail({ email, code }) {
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    const cleanCode = String(code || '').trim();
+    if (!cleanEmail || !cleanCode) {
+      throw new Error('Hiányzó e-mail cím vagy megerősítő kód!');
+    }
+
+    if (this.mode === 'postgres-docker') {
+      const res = await this.pool.query(
+        'SELECT * FROM users WHERE LOWER(email) = LOWER($1) OR LOWER(username) = LOWER($1)',
+        [cleanEmail]
+      );
+      if (res.rows.length === 0) throw new Error('Felhasználó nem található!');
+      const u = res.rows[0];
+      if (u.email_verified) {
+        return u;
+      }
+      if (String(u.verification_code || '') !== cleanCode) {
+        throw new Error('Hibás 6 jegyű megerősítő kód!');
+      }
+      if (u.verification_expires_at && new Date(u.verification_expires_at).getTime() < Date.now()) {
+        throw new Error('A megerősítő kód lejárt! Kérj új kódot.');
+      }
+      const upd = await this.pool.query(
+        `UPDATE users
+         SET email_verified = TRUE, verification_code = NULL, verification_expires_at = NULL
+         WHERE id = $1
+         RETURNING id, username, email, role, avatar_color, email_verified, games_played, games_won, total_points, counties_conquered, correct_answers, total_answers`,
+        [u.id]
+      );
+      return upd.rows[0];
+    } else {
+      const u = this.sqlite
+        .prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)')
+        .get(cleanEmail, cleanEmail);
+      if (!u) throw new Error('Felhasználó nem található!');
+      if (u.email_verified) return u;
+      if (String(u.verification_code || '') !== cleanCode) {
+        throw new Error('Hibás 6 jegyű megerősítő kód!');
+      }
+      if (u.verification_expires_at && new Date(u.verification_expires_at).getTime() < Date.now()) {
+        throw new Error('A megerősítő kód lejárt! Kérj új kódot.');
+      }
+      this.sqlite
+        .prepare('UPDATE users SET email_verified = 1, verification_code = NULL, verification_expires_at = NULL WHERE id = ?')
+        .run(u.id);
+      return this.sqlite
+        .prepare('SELECT id, username, email, role, avatar_color, email_verified, games_played, games_won, total_points, counties_conquered, correct_answers, total_answers FROM users WHERE id = ?')
+        .get(u.id);
+    }
+  }
+
+  async resendVerificationCode({ email }) {
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    const newCode = generateVerificationCode();
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+
+    if (this.mode === 'postgres-docker') {
+      const res = await this.pool.query(
+        `UPDATE users
+         SET verification_code = $1, verification_expires_at = $2
+         WHERE (LOWER(email) = LOWER($3) OR LOWER(username) = LOWER($3)) AND email_verified = FALSE
+         RETURNING id, username, email`,
+        [newCode, expiresAt, cleanEmail]
+      );
+      if (res.rows.length === 0) throw new Error('Nem található megerősítésre váró fiók ezzel az e-mail címmel!');
+      return { user: res.rows[0], verificationCode: newCode };
+    } else {
+      const u = this.sqlite
+        .prepare('SELECT id, username, email, email_verified FROM users WHERE LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)')
+        .get(cleanEmail, cleanEmail);
+      if (!u || u.email_verified) throw new Error('Nem található megerősítésre váró fiók ezzel az e-mail címmel!');
+      this.sqlite
+        .prepare('UPDATE users SET verification_code = ?, verification_expires_at = ? WHERE id = ?')
+        .run(newCode, expiresAt, u.id);
+      return { user: u, verificationCode: newCode };
     }
   }
 
   async loginUser({ username, password }) {
     const cleanUser = String(username || '').trim();
-    const pwHash = hashPassword(String(password || ''));
+    const pw = String(password || '');
 
+    let user = null;
     if (this.mode === 'postgres-docker') {
       const res = await this.pool.query(
-        `SELECT id, username, email, role, avatar_color, games_played, games_won, total_points, counties_conquered, correct_answers, total_answers
-         FROM users
-         WHERE (LOWER(username) = LOWER($1) OR LOWER(email) = LOWER($1)) AND password_hash = $2`,
-        [cleanUser, pwHash]
+        `SELECT * FROM users WHERE LOWER(username) = LOWER($1) OR LOWER(email) = LOWER($1)`,
+        [cleanUser]
       );
-      if (res.rows.length === 0) {
-        throw new Error('Hibás felhasználónév vagy jelszó!');
-      }
-      const user = res.rows[0];
-      user.isAdmin = user.username === ADMIN_USERNAME || user.role === 'admin';
-      return user;
+      user = res.rows[0] || null;
     } else {
-      const user = this.sqlite
-        .prepare(
-          `SELECT id, username, email, role, avatar_color, games_played, games_won, total_points, counties_conquered, correct_answers, total_answers
-           FROM users
-           WHERE (LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)) AND password_hash = ?`
-        )
-        .get(cleanUser, cleanUser, pwHash);
-      if (!user) {
-        throw new Error('Hibás felhasználónév vagy jelszó!');
-      }
-      user.isAdmin = user.username === ADMIN_USERNAME || user.role === 'admin';
-      return user;
+      user = this.sqlite
+        .prepare('SELECT * FROM users WHERE LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)')
+        .get(cleanUser, cleanUser) || null;
     }
+
+    if (!user || !verifyPassword(pw, user.password_hash)) {
+      throw new Error('Hibás felhasználónév vagy jelszó!');
+    }
+
+    const isAdmin = user.username === ADMIN_USERNAME || user.role === 'admin';
+    if (!isAdmin && !user.email_verified) {
+      const err = new Error('Kérlek először erősítsd meg az e-mail címedet a kiküldött 6 jegyű kóddal!');
+      err.requiresVerification = true;
+      err.email = user.email;
+      throw err;
+    }
+
+    return {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      isAdmin,
+      avatar_color: user.avatar_color,
+      email_verified: Boolean(user.email_verified || isAdmin),
+      games_played: user.games_played,
+      games_won: user.games_won,
+      total_points: user.total_points,
+      counties_conquered: user.counties_conquered,
+      correct_answers: user.correct_answers,
+      total_answers: user.total_answers
+    };
   }
 
   async recordMatch(matchData) {

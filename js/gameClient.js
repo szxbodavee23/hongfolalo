@@ -23,7 +23,8 @@ const online = {
   sse: null,
   pollId: null,
   lastQuestionId: null,
-  lastStage: null
+  lastStage: null,
+  dismissedQuestionId: null
 };
 
 // Local timer state (for AI mode)
@@ -33,6 +34,8 @@ let localStartMs = 0;
 let localAnsweringColor = null;
 let localSubmissions = {};
 let localAfterEstCallback = null;
+let localIsTiebreakerEst = false;
+let soloAiBusy = false;
 
 async function initGameWindow() {
   // Enforce mandatory Registration / Login!
@@ -374,6 +377,14 @@ function syncOnlineModals(state) {
     mcOv.classList.add('hidden');
     online.lastQuestionId = null;
     online.lastStage = null;
+    online.dismissedQuestionId = null;
+    return;
+  }
+
+  // If the player already clicked "Tovább" on this question's REVEAL screen, do NOT pop the modal back up!
+  if (qs.stage === 'REVEAL' && online.dismissedQuestionId === qs.id) {
+    estOv.classList.add('hidden');
+    mcOv.classList.add('hidden');
     return;
   }
 
@@ -524,9 +535,10 @@ function startSoloAiGame() {
 
 function stepSoloFlow() {
   renderAll();
+  if (soloAiBusy) return;
 
   if (engine.phase === PHASES.BASE_QUESTION) {
-    openLocalEstimation(() => {
+    openLocalEstimation(false, () => {
       engine.submitBaseQuestionAnswers(localSubmissions);
     });
     return;
@@ -536,20 +548,22 @@ function stepSoloFlow() {
     const cur = engine.currentSelector;
     const p = engine.players[cur];
     if (p && !p.isHuman) {
+      soloAiBusy = true;
       setTimeout(() => {
+        soloAiBusy = false;
         const cid = engine.chooseAiBaseCounty(cur);
         if (cid) {
           engine.selectBaseCounty(cur, cid);
           sound.playCastleBuild();
           stepSoloFlow();
         }
-      }, 750);
+      }, 650);
     }
     return;
   }
 
   if (engine.phase === PHASES.EXPANSION_QUESTION) {
-    openLocalEstimation(() => {
+    openLocalEstimation(false, () => {
       engine.submitExpansionQuestionAnswers(localSubmissions);
     });
     return;
@@ -559,14 +573,16 @@ function stepSoloFlow() {
     const cur = engine.currentSelector;
     const p = engine.players[cur];
     if (p && !p.isHuman) {
+      soloAiBusy = true;
       setTimeout(() => {
+        soloAiBusy = false;
         const cid = engine.chooseAiExpansionCounty(cur);
         if (cid) {
           engine.selectExpansionCounty(cur, cid);
           sound.playClaim();
           stepSoloFlow();
         }
-      }, 700);
+      }, 600);
     }
     return;
   }
@@ -575,7 +591,9 @@ function stepSoloFlow() {
     const attId = engine.currentSelector;
     const att = engine.players[attId];
     if (att && !att.isHuman) {
+      soloAiBusy = true;
       setTimeout(() => {
+        soloAiBusy = false;
         const target = engine.chooseAiAttackTarget(attId);
         if (!target) {
           engine.completeCurrentBattleTurn();
@@ -605,14 +623,16 @@ function stepSoloFlow() {
             });
           }
           renderAll();
+          soloAiBusy = true;
           setTimeout(() => {
+            soloAiBusy = false;
             engine.completeCurrentBattleTurn();
             stepSoloFlow();
-          }, 900);
+          }, 800);
         } else {
           openLocalMcBattle();
         }
-      }, 850);
+      }, 750);
     }
     return;
   }
@@ -622,8 +642,9 @@ function stepSoloFlow() {
   }
 }
 
-function openLocalEstimation(onComplete) {
+function openLocalEstimation(isTiebreaker, onComplete) {
   const q = engine.activeQuestion;
+  localIsTiebreakerEst = Boolean(isTiebreaker);
   localAfterEstCallback = onComplete;
   localSubmissions = {};
 
@@ -684,10 +705,14 @@ function submitEstValue() {
   };
   localAnsweringColor = null;
 
-  if (localAfterEstCallback) localAfterEstCallback();
+  if (localAfterEstCallback) {
+    const cb = localAfterEstCallback;
+    localAfterEstCallback = null;
+    cb();
+  }
 
   const q = engine.activeQuestion;
-  const res = engine.lastQuestionResults || engine.activeBattle?.tiebreakerResults;
+  const res = localIsTiebreakerEst ? engine.activeBattle?.tiebreakerResults : engine.lastQuestionResults;
   document.getElementById('estInputWrap').classList.add('hidden');
   document.getElementById('estResultsWrap').classList.remove('hidden');
   document.getElementById('estCorrectAnswer').textContent = `${q.answer}${q.unit ? ' ' + q.unit : ''}`;
@@ -707,6 +732,7 @@ function submitEstValue() {
 
   sound.playCorrect();
   renderAll();
+  setTimeout(() => document.getElementById('btnEstContinue')?.focus(), 40);
 }
 
 function openLocalMcBattle() {
@@ -823,8 +849,9 @@ function submitMcChoice(choiceIndex) {
     sound.playCorrect();
     summaryText.textContent = 'Mindketten helyesen válaszoltatok! Tippelős párbaj dönt!';
     contBtn.onclick = () => {
+      contBtn.onclick = null;
       document.getElementById('mcOverlay').classList.add('hidden');
-      openLocalEstimation(() => {
+      openLocalEstimation(true, () => {
         engine.submitBattleTiebreakerAnswers(localSubmissions);
       });
     };
@@ -832,12 +859,14 @@ function submitMcChoice(choiceIndex) {
     sound.playSwordClash();
     summaryText.textContent = engine.activeBattle.outcome?.message || '';
     contBtn.onclick = () => {
+      contBtn.onclick = null;
       document.getElementById('mcOverlay').classList.add('hidden');
       engine.completeCurrentBattleTurn();
       stepSoloFlow();
     };
   }
   renderAll();
+  setTimeout(() => contBtn?.focus(), 40);
 }
 
 async function onCountyClick(countyId) {
@@ -980,18 +1009,36 @@ function bindGameEvents() {
   document.getElementById('btnSubmitEst').addEventListener('click', submitEstValue);
 
   document.getElementById('btnEstContinue').addEventListener('click', () => {
-    document.getElementById('estimationOverlay').classList.add('hidden');
-    if (!online.active) {
-      if (engine.phase === PHASES.BATTLE_TIEBREAKER_QUESTION || engine.activeBattle?.tiebreakerResults) {
-        engine.completeCurrentBattleTurn();
-      }
-      stepSoloFlow();
+    const estOv = document.getElementById('estimationOverlay');
+    if (estOv.classList.contains('hidden')) return;
+    estOv.classList.add('hidden');
+
+    if (online.active) {
+      online.dismissedQuestionId = online.lastQuestionId;
+      fetch(`/api/rooms/${online.code}/continue`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: online.token })
+      });
+      return;
     }
+
+    if (localIsTiebreakerEst) {
+      localIsTiebreakerEst = false;
+      engine.completeCurrentBattleTurn();
+    }
+    stepSoloFlow();
   });
 
   document.getElementById('btnMcContinue').addEventListener('click', () => {
     if (online.active) {
+      online.dismissedQuestionId = online.lastQuestionId;
       document.getElementById('mcOverlay').classList.add('hidden');
+      fetch(`/api/rooms/${online.code}/continue`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: online.token })
+      });
     }
   });
 

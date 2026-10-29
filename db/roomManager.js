@@ -402,6 +402,7 @@ class RoomManager {
     }
 
     session.stage = 'REVEAL';
+    session.continuedBy = new Set();
     const phase = session.phaseAtStart;
 
     if (phase === PHASES.BASE_QUESTION) {
@@ -412,12 +413,13 @@ class RoomManager {
         unit: session.unit,
         ranked: results.ranked
       };
-      this.broadcastRoom(room);
-      room.revealTimer = setTimeout(() => {
+      session.onRevealFinish = () => {
         room.questionSession = null;
         this.broadcastRoom(room);
         this.scheduleAiTurnIfNeeded(room);
-      }, 3800);
+      };
+      this.broadcastRoom(room);
+      room.revealTimer = setTimeout(() => this.finishRevealStage(room), 3800);
       return;
     }
 
@@ -429,12 +431,13 @@ class RoomManager {
         unit: session.unit,
         ranked: results.ranked
       };
-      this.broadcastRoom(room);
-      room.revealTimer = setTimeout(() => {
+      session.onRevealFinish = () => {
         room.questionSession = null;
         this.broadcastRoom(room);
         this.scheduleAiTurnIfNeeded(room);
-      }, 3800);
+      };
+      this.broadcastRoom(room);
+      room.revealTimer = setTimeout(() => this.finishRevealStage(room), 3800);
       return;
     }
 
@@ -449,21 +452,23 @@ class RoomManager {
         attackerChoice: mcRes.attacker.choiceIndex,
         defenderChoice: mcRes.defender.choiceIndex,
         status: res.status,
-        outcomeMessage: eng.activeBattle.outcome?.message || 'Mindkét vezér helyesen válaszolt! Tippelős párbaj következik!'
+        outcomeMessage: eng.activeBattle.outcome?.message || 'Mindketten helyesen válaszoltak! Tippelős párbaj következik!'
       };
       this.broadcastRoom(room);
 
       if (res.status === 'TIEBREAKER') {
-        room.revealTimer = setTimeout(() => {
+        session.onRevealFinish = () => {
           this.startQuestionSession(room);
           this.broadcastRoom(room);
-        }, 3200);
+        };
+        room.revealTimer = setTimeout(() => this.finishRevealStage(room), 3200);
       } else {
-        room.revealTimer = setTimeout(() => {
+        session.onRevealFinish = () => {
           room.questionSession = null;
           eng.completeCurrentBattleTurn();
           this.checkGameOverOrAdvance(room);
-        }, 3600);
+        };
+        room.revealTimer = setTimeout(() => this.finishRevealStage(room), 3600);
       }
       return;
     }
@@ -478,14 +483,41 @@ class RoomManager {
         ranked: tbRes.ranked,
         outcomeMessage: eng.activeBattle.outcome?.message || ''
       };
-      this.broadcastRoom(room);
-
-      room.revealTimer = setTimeout(() => {
+      session.onRevealFinish = () => {
         room.questionSession = null;
         eng.completeCurrentBattleTurn();
         this.checkGameOverOrAdvance(room);
-      }, 4000);
+      };
+      this.broadcastRoom(room);
+      room.revealTimer = setTimeout(() => this.finishRevealStage(room), 4000);
     }
+  }
+
+  finishRevealStage(room) {
+    clearTimeout(room.revealTimer);
+    const session = room.questionSession;
+    if (!session || session.stage !== 'REVEAL') return;
+    const cb = session.onRevealFinish;
+    session.onRevealFinish = null;
+    if (cb) cb();
+  }
+
+  playerContinueReveal(code, token) {
+    const room = this.rooms.get(String(code || '').toUpperCase());
+    if (!room) throw new Error('Szoba nem található!');
+    const color = this.getPlayerColorByToken(room, token);
+    const session = room.questionSession;
+    if (!session || session.stage !== 'REVEAL') {
+      return this.serializeRoomState(room, token);
+    }
+    if (color) {
+      session.continuedBy.add(color);
+    }
+    const humanParticipants = session.participants.filter(pid => room.engine.players[pid]?.isHuman);
+    if (humanParticipants.every(pid => session.continuedBy.has(pid))) {
+      this.finishRevealStage(room);
+    }
+    return this.serializeRoomState(room, token);
   }
 
   // ==================== MAP SELECTION & AI TURNS ====================

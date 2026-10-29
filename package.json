@@ -1,6 +1,8 @@
 {
   "name": "honfoglalo-web-clone",
   "version": "1.0.0",
+  "private": true,
+  "license": "UNLICENSED",
   "type": "module",
   "description": "Classic Hungarian Honfoglalo strategy & trivia web game with Docker PostgreSQL backend",
   "main": "server.js",

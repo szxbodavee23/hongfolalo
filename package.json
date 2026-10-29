@@ -7,7 +7,7 @@
   "description": "Classic Hungarian Honfoglalo strategy & trivia web game with Docker PostgreSQL backend",
   "main": "server.js",
   "engines": {
-    "node": ">=22.5.0"
+    "node": ">=24.0.0"
   },
   "scripts": {
     "start": "node server.js",

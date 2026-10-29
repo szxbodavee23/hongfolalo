@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   username VARCHAR(64) UNIQUE NOT NULL,
   email VARCHAR(120) UNIQUE NOT NULL,
-  password_hash VARCHAR(128) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
   role VARCHAR(16) DEFAULT 'user',
   avatar_color VARCHAR(16) DEFAULT 'red',
   email_verified BOOLEAN DEFAULT FALSE,

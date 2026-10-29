@@ -83,6 +83,7 @@ class DatabaseService {
         }
 
         // Ensure role & email verification columns on users and status column on questions
+        await client.query("ALTER TABLE users ALTER COLUMN password_hash TYPE VARCHAR(255)");
         await client.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(16) DEFAULT 'user'");
         await client.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE");
         await client.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code VARCHAR(16)");
@@ -112,7 +113,11 @@ class DatabaseService {
         client.release();
       }
     } catch (err) {
-      console.warn('[DB] Docker PostgreSQL not reachable, initializing native SQLite fallback:', err.message);
+      // In production (DATABASE_URL set) always surface the real PostgreSQL error instead of hiding it behind a fallback
+      if (process.env.DATABASE_URL) {
+        throw err;
+      }
+      console.warn('[DB] PostgreSQL not reachable, initializing native SQLite fallback:', err.message);
       await this.initSqliteFallback();
     }
   }

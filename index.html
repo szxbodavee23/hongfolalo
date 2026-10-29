@@ -117,12 +117,8 @@
           </div>
 
           <div class="field">
-            <label for="regCaptchaAnswer">Biztonsági ellenőrzés – Mennyi a művelet eredménye?</label>
-            <div style="display:flex; align-items:center; gap:10px;">
-              <img id="captchaImg" alt="Biztonsági ellenőrzőkód" style="height:44px; border-radius:8px; border:1px solid var(--border-subtle);" />
-              <input type="number" id="regCaptchaAnswer" class="input" placeholder="Eredmény" style="flex:1;" required />
-              <button type="button" class="btn btn--ghost btn--sm" id="btnReloadCaptcha" title="Új feladvány">↻</button>
-            </div>
+            <label>Biztonsági ellenőrzés</label>
+            <div class="g-recaptcha" data-sitekey="6LeBBAcuAAAAAP03r8ObxsBdhx3drAz4Kk3d2NmY" data-theme="dark"></div>
           </div>
 
           <div class="alert alert--error hidden" id="regError"></div>
@@ -579,6 +575,7 @@
     </section>
   </main>
 
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
   <script type="module" src="/js/portal.js"></script>
 </body>
 </html>

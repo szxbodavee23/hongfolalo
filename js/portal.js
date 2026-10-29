@@ -2,7 +2,6 @@
 
 let currentUser = null;
 let currentAuthToken = null;
-let currentCaptchaToken = null;
 let registeredUsers = [];
 let adminQuestions = { pending: [], approved: [] };
 let adminUsers = [];
@@ -89,16 +88,17 @@ function setLoggedInUser(user, authToken = null) {
   renderAuthGate();
 }
 
-async function loadNewCaptcha() {
+function getRecaptchaResponse() {
   try {
-    const res = await fetch('/api/auth/captcha');
-    if (!res.ok) return;
-    const data = await res.json();
-    currentCaptchaToken = data.captchaToken;
-    const img = document.getElementById('captchaImg');
-    if (img) img.src = data.svgDataUri;
-    const ansInput = document.getElementById('regCaptchaAnswer');
-    if (ansInput) ansInput.value = '';
+    return window.grecaptcha ? window.grecaptcha.getResponse() : '';
+  } catch {
+    return '';
+  }
+}
+
+function resetRecaptcha() {
+  try {
+    if (window.grecaptcha) window.grecaptcha.reset();
   } catch {
     // ignore
   }
@@ -814,10 +814,7 @@ function bindPortalEvents() {
     regForm.classList.remove('hidden');
     loginForm.classList.add('hidden');
     verifyForm.classList.add('hidden');
-    loadNewCaptcha();
   });
-
-  document.getElementById('btnReloadCaptcha')?.addEventListener('click', loadNewCaptcha);
 
   document.getElementById('btnBackToLogin')?.addEventListener('click', () => {
     tabLogin.click();
@@ -865,14 +862,13 @@ function bindPortalEvents() {
           username: document.getElementById('regUsername').value,
           email: document.getElementById('regEmail').value,
           password: document.getElementById('regPassword').value,
-          captchaToken: currentCaptchaToken,
-          captchaAnswer: document.getElementById('regCaptchaAnswer').value,
+          recaptchaResponse: getRecaptchaResponse(),
           website: document.getElementById('regWebsiteHoneypot').value
         })
       });
       const data = await res.json();
       if (!res.ok) {
-        await loadNewCaptcha();
+        resetRecaptcha();
         throw new Error(data.error || 'Sikertelen regisztráció');
       }
 

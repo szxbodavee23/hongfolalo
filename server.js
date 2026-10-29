@@ -1,5 +1,10 @@
 // Proprietary Honfoglalo Web Server & Hardened REST API
 // Copyright (c) 2026 All Rights Reserved. Unauthorized copying or distribution is strictly prohibited.
+try {
+  process.loadEnvFile();
+} catch {
+  // .env file is optional (e.g. Render injects env vars directly)
+}
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
@@ -12,8 +17,11 @@ import {
   createAuthToken,
   extractAuthUser,
   requireAdminAuth,
+  getClientIp,
   generateCaptchaChallenge,
-  verifyCaptchaChallenge
+  verifyCaptchaChallenge,
+  verifyRegistrationAntiBot,
+  isRecaptchaConfigured
 } from './db/security.js';
 import { sendVerificationEmail, recentOutboxEmails } from './db/mailer.js';
 
@@ -116,7 +124,7 @@ async function handleApi(req, res, pathname, urlObj) {
         });
       }
       const body = await parseBody(req);
-      verifyCaptchaChallenge(body.captchaToken, body.captchaAnswer, body.website);
+      await verifyRegistrationAntiBot(body, getClientIp(req));
 
       const { user, verificationCode } = await db.registerUser(body);
       const mailRes = await sendVerificationEmail({

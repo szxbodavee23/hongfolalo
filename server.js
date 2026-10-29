@@ -199,6 +199,7 @@ async function handleApi(req, res, pathname, urlObj) {
       const result = await db.requestPasswordReset({ identifier: body.identifier });
       let maskedEmail = null;
       let emailSent = false;
+      let provider = null;
       if (result) {
         const mailRes = await sendPasswordResetEmail({
           toEmail: result.user.email,
@@ -206,10 +207,11 @@ async function handleApi(req, res, pathname, urlObj) {
           code: result.resetCode
         });
         emailSent = mailRes.sent;
+        provider = mailRes.provider;
         maskedEmail = maskEmailAddress(result.user.email);
       }
       // Generic response either way — do not reveal whether the account exists
-      return sendJson(res, 200, { ok: true, emailSent, maskedEmail });
+      return sendJson(res, 200, { ok: true, emailSent, provider, maskedEmail });
     }
 
     if (req.method === 'POST' && pathname === '/api/auth/reset-password') {

@@ -444,6 +444,18 @@ body {
   color: #fecaca;
 }
 
+.alert--info {
+  background: rgba(46, 139, 71, 0.18);
+  border: 1px solid rgba(46, 139, 71, 0.55);
+  color: #a7f3c9;
+}
+
+.auth-form__links {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
 /* ==================== OPEN DASHBOARD & LOBBY ==================== */
 .dashboard-nav {
   display: flex;

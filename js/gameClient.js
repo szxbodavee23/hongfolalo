@@ -639,6 +639,17 @@ function stepSoloFlow() {
     return;
   }
 
+  // Safety net: if the engine is waiting in a tiebreaker with no visible modal, reopen it
+  if (engine.phase === PHASES.BATTLE_TIEBREAKER_QUESTION && engine.activeBattle) {
+    const estOv = document.getElementById('estimationOverlay');
+    if (estOv.classList.contains('hidden')) {
+      openLocalEstimation(true, () => {
+        engine.submitBattleTiebreakerAnswers(localSubmissions);
+      });
+    }
+    return;
+  }
+
   if (engine.phase === PHASES.GAME_OVER) {
     finishSoloGame();
   }

@@ -41,6 +41,31 @@ export async function sendVerificationEmail({ toEmail, username, code, baseUrl }
     </div>
   `;
 
+  return deliverMail({ cleanEmail, username, subject, htmlBody, code, verifyUrl });
+}
+
+export async function sendPasswordResetEmail({ toEmail, username, code }) {
+  const cleanEmail = String(toEmail || '').trim();
+  const subject = `Honfoglaló – Elfelejtett jelszó (Kód: ${code})`;
+
+  const htmlBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; background: #221307; color: #fdf3dc; padding: 28px; border-radius: 14px; border: 2px solid #d49b27;">
+      <h2 style="color: #f5c445; margin-top: 0;">Honfoglaló – Jelszó Visszaállítása</h2>
+      <p>Kedves <strong>${username}</strong>!</p>
+      <p>Elfelejtett jelszó visszaállítást kértek a fiókodhoz. Írd be az alábbi 6 jegyű visszaállító kódot a weboldalon, majd adj meg egy új jelszót:</p>
+      <div style="background: #140a03; border: 2px solid #f5c445; border-radius: 10px; padding: 14px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #f7c948; margin: 20px 0;">
+        ${code}
+      </div>
+      <p>A kód <strong>15 percig</strong> érvényes.</p>
+      <p style="font-size: 12px; color: #a68b5b;">Ha nem te kérted a visszaállítást, kérlek hagyd figyelmen kívül ezt az üzenetet – a jelszavad nem változik meg.</p>
+    </div>
+  `;
+
+  return deliverMail({ cleanEmail, username, subject, htmlBody, code, verifyUrl: null });
+}
+
+// Shared delivery logic: Resend API -> Brevo API -> raw SMTP -> console/outbox fallback
+async function deliverMail({ cleanEmail, username, subject, htmlBody, code, verifyUrl }) {
   // 1. Check Resend HTTP API (Recommended for Render.com)
   if (process.env.RESEND_API_KEY) {
     try {

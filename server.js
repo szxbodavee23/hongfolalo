@@ -23,7 +23,7 @@ import {
   verifyRegistrationAntiBot,
   isRecaptchaConfigured
 } from './db/security.js';
-import { sendVerificationEmail, recentOutboxEmails } from './db/mailer.js';
+import { sendVerificationEmail, sendPasswordResetEmail, recentOutboxEmails } from './db/mailer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -91,6 +91,14 @@ function getBaseUrl(req) {
   const proto = req.headers['x-forwarded-proto'] || 'http';
   const host = req.headers['host'] || `localhost:${PORT}`;
   return `${proto}://${host}`;
+}
+
+// "pelda@gmail.com" -> "pe***@gmail.com"
+function maskEmailAddress(email) {
+  const e = String(email || '');
+  const at = e.indexOf('@');
+  if (at <= 0) return '***';
+  return `${e.slice(0, Math.min(2, at))}***${e.slice(at)}`;
 }
 
 async function handleApi(req, res, pathname, urlObj) {
@@ -179,6 +187,44 @@ async function handleApi(req, res, pathname, urlObj) {
         baseUrl: getBaseUrl(req)
       });
       return sendJson(res, 200, { ok: true, emailSent: mailRes.sent });
+    }
+
+    // ==================== FORGOT / RESET PASSWORD ====================
+    if (req.method === 'POST' && pathname === '/api/auth/forgot-password') {
+      const limit = checkRateLimit(req, 'auth_forgot', 5, 300000);
+      if (!limit.allowed) {
+        return sendJson(res, 429, { error: 'Túl sok próbálkozás! Kérlek várj pár percet.' });
+      }
+      const body = await parseBody(req);
+      const result = await db.requestPasswordReset({ identifier: body.identifier });
+      let maskedEmail = null;
+      let emailSent = false;
+      if (result) {
+        const mailRes = await sendPasswordResetEmail({
+          toEmail: result.user.email,
+          username: result.user.username,
+          code: result.resetCode
+        });
+        emailSent = mailRes.sent;
+        maskedEmail = maskEmailAddress(result.user.email);
+      }
+      // Generic response either way — do not reveal whether the account exists
+      return sendJson(res, 200, { ok: true, emailSent, maskedEmail });
+    }
+
+    if (req.method === 'POST' && pathname === '/api/auth/reset-password') {
+      const limit = checkRateLimit(req, 'auth_reset', 8, 300000);
+      if (!limit.allowed) {
+        return sendJson(res, 429, { error: 'Túl sok próbálkozás! Kérlek várj pár percet.' });
+      }
+      const body = await parseBody(req);
+      const user = await db.resetPasswordWithCode({
+        identifier: body.identifier,
+        code: body.code,
+        newPassword: body.newPassword
+      });
+      const authToken = createAuthToken(user);
+      return sendJson(res, 200, { ok: true, user, authToken });
     }
 
     if (req.method === 'POST' && pathname === '/api/auth/login') {

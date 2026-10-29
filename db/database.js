@@ -88,6 +88,8 @@ class DatabaseService {
         await client.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE");
         await client.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_code VARCHAR(16)");
         await client.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_expires_at TIMESTAMP");
+        await client.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_code VARCHAR(16)");
+        await client.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_expires_at TIMESTAMP");
         await client.query("ALTER TABLE questions ADD COLUMN IF NOT EXISTS status VARCHAR(16) DEFAULT 'approved'");
         await client.query("UPDATE questions SET status = 'approved' WHERE status IS NULL");
 
@@ -181,6 +183,8 @@ class DatabaseService {
     try { this.sqlite.exec("ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0"); } catch {}
     try { this.sqlite.exec("ALTER TABLE users ADD COLUMN verification_code TEXT"); } catch {}
     try { this.sqlite.exec("ALTER TABLE users ADD COLUMN verification_expires_at TEXT"); } catch {}
+    try { this.sqlite.exec("ALTER TABLE users ADD COLUMN reset_code TEXT"); } catch {}
+    try { this.sqlite.exec("ALTER TABLE users ADD COLUMN reset_expires_at TEXT"); } catch {}
     try { this.sqlite.exec("ALTER TABLE questions ADD COLUMN status TEXT DEFAULT 'approved'"); } catch {}
 
     this.sqlite.exec("DELETE FROM users WHERE email LIKE '%@honfoglalo.hu' OR email LIKE '%@example.com'");
@@ -660,6 +664,80 @@ class DatabaseService {
         .prepare('UPDATE users SET verification_code = ?, verification_expires_at = ? WHERE id = ?')
         .run(newCode, expiresAt, u.id);
       return { user: u, verificationCode: newCode };
+    }
+  }
+
+  async requestPasswordReset({ identifier }) {
+    const cleanId = String(identifier || '').trim();
+    if (!cleanId) throw new Error('Add meg a felhasználónevedet vagy e-mail címedet!');
+    const code = generateVerificationCode();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 min validity
+
+    if (this.mode === 'postgres-docker') {
+      const res = await this.pool.query(
+        `UPDATE users
+         SET reset_code = $1, reset_expires_at = $2
+         WHERE (LOWER(email) = LOWER($3) OR LOWER(username) = LOWER($3)) AND email_verified = TRUE
+         RETURNING id, username, email`,
+        [code, expiresAt, cleanId]
+      );
+      // Return null instead of throwing — do not leak whether the account exists
+      if (res.rows.length === 0) return null;
+      return { user: res.rows[0], resetCode: code };
+    } else {
+      const u = this.sqlite
+        .prepare('SELECT id, username, email FROM users WHERE (LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)) AND email_verified = 1')
+        .get(cleanId, cleanId);
+      if (!u) return null;
+      this.sqlite
+        .prepare('UPDATE users SET reset_code = ?, reset_expires_at = ? WHERE id = ?')
+        .run(code, expiresAt, u.id);
+      return { user: u, resetCode: code };
+    }
+  }
+
+  async resetPasswordWithCode({ identifier, code, newPassword }) {
+    const cleanId = String(identifier || '').trim();
+    const cleanCode = String(code || '').trim();
+    const pw = String(newPassword || '');
+    if (!cleanId || !cleanCode) throw new Error('Hiányzó azonosító vagy visszaállító kód!');
+    if (pw.length < 4) throw new Error('Az új jelszó legalább 4 karakter legyen!');
+
+    const newHash = hashPassword(pw);
+    const safeCols = 'id, username, email, role, avatar_color, email_verified, games_played, games_won, total_points, counties_conquered, correct_answers, total_answers';
+
+    if (this.mode === 'postgres-docker') {
+      const res = await this.pool.query(
+        'SELECT * FROM users WHERE LOWER(email) = LOWER($1) OR LOWER(username) = LOWER($1)',
+        [cleanId]
+      );
+      const u = res.rows[0];
+      if (!u || String(u.reset_code || '') !== cleanCode || !u.reset_code) {
+        throw new Error('Hibás visszaállító kód!');
+      }
+      if (u.reset_expires_at && new Date(u.reset_expires_at).getTime() < Date.now()) {
+        throw new Error('A visszaállító kód lejárt! Kérj újat.');
+      }
+      const upd = await this.pool.query(
+        `UPDATE users SET password_hash = $1, reset_code = NULL, reset_expires_at = NULL
+         WHERE id = $2 RETURNING ${safeCols}`,
+        [newHash, u.id]
+      );
+      return upd.rows[0];
+    } else {
+      const u = this.sqlite
+        .prepare('SELECT * FROM users WHERE LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)')
+        .get(cleanId, cleanId);
+      if (!u || !u.reset_code || String(u.reset_code) !== cleanCode) {
+        throw new Error('Hibás visszaállító kód!');
+      }
+      if (u.reset_expires_at && new Date(u.reset_expires_at).getTime() < Date.now()) {
+        throw new Error('A visszaállító kód lejárt! Kérj újat.');
+      }
+      this.sqlite
+        .prepare('UPDATE users SET password_hash = ?, reset_code = NULL, reset_expires_at = NULL WHERE id = ?')
+        .run(newHash, u.id);
+      return this.sqlite.prepare(`SELECT ${safeCols} FROM users WHERE id = ?`).get(u.id);
     }
   }
 

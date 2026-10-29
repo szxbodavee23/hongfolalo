@@ -97,6 +97,9 @@
           </label>
           <div class="alert alert--error hidden" id="loginError"></div>
           <button type="submit" class="btn btn--primary btn--block">Bejelentkezés</button>
+          <div class="auth-form__links">
+            <button type="button" class="btn btn--ghost btn--xs" id="linkForgotPassword">Elfelejtetted a jelszavad?</button>
+          </div>
         </form>
 
         <!-- Register Form -->
@@ -147,6 +150,33 @@
           <div style="display:flex; justify-content:space-between; margin-top:12px;">
             <button type="button" class="btn btn--ghost btn--xs" id="btnResendVerifyCode">Új kód küldése</button>
             <button type="button" class="btn btn--ghost btn--xs" id="btnBackToLogin">Vissza a belépéshez</button>
+          </div>
+        </form>
+
+        <!-- Forgot / Reset Password Form (two-step: request code -> set new password) -->
+        <form id="forgotPasswordForm" class="auth-form hidden" autocomplete="off">
+          <p class="auth-form__sub">
+            Add meg a felhasználónevedet vagy e-mail címedet, és küldünk egy 6 jegyű visszaállító kódot.
+          </p>
+          <div class="field">
+            <label for="fpIdentifier">Felhasználónév vagy E-mail</label>
+            <input type="text" id="fpIdentifier" class="input" placeholder="Felhasználónév vagy e-mail" required />
+          </div>
+          <div id="fpResetFields" class="hidden">
+            <div class="field">
+              <label for="fpCode">6 jegyű visszaállító kód</label>
+              <input type="text" id="fpCode" class="input input--code" placeholder="123456" maxlength="6" inputmode="numeric" />
+            </div>
+            <div class="field">
+              <label for="fpNewPassword">Új jelszó (min. 4 karakter)</label>
+              <input type="password" id="fpNewPassword" name="new-password" class="input" placeholder="••••••••" minlength="4" autocomplete="new-password" />
+            </div>
+          </div>
+          <div class="alert alert--error hidden" id="fpError"></div>
+          <div class="alert alert--info hidden" id="fpInfo"></div>
+          <button type="submit" class="btn btn--primary btn--block" id="fpSubmitBtn">Visszaállító Kód Küldése</button>
+          <div class="auth-form__links">
+            <button type="button" class="btn btn--ghost btn--xs" id="btnBackToLoginForgot">Vissza a belépéshez</button>
           </div>
         </form>
       </div>

@@ -199,6 +199,7 @@ function resetRecaptcha() {
 function openEmailVerificationView(emailAddress, customNotice = null) {
   document.getElementById('loginForm').classList.add('hidden');
   document.getElementById('registerForm').classList.add('hidden');
+  document.getElementById('forgotPasswordForm')?.classList.add('hidden');
   const vForm = document.getElementById('verifyEmailForm');
   vForm.classList.remove('hidden');
 
@@ -531,12 +532,12 @@ function launchGame(url, windowName = 'HonfoglaloGameWindow') {
     window.location.href = url;
     return;
   }
-  const features = 'width=1380,height=860,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
-  const win = window.open(url, windowName, features);
+  // Always open a fresh tab/window via _blank (never reuse a named window)
+  const win = window.open(url, '_blank');
   if (win) {
     win.focus();
   } else {
-    window.open(url, '_blank');
+    window.location.href = url;
   }
 }
 
@@ -911,12 +912,15 @@ function bindPortalEvents() {
   const regForm = document.getElementById('registerForm');
   const verifyForm = document.getElementById('verifyEmailForm');
 
+  const fpForm = document.getElementById('forgotPasswordForm');
+
   tabLogin.addEventListener('click', () => {
     tabLogin.classList.add('active');
     tabReg.classList.remove('active');
     loginForm.classList.remove('hidden');
     regForm.classList.add('hidden');
     verifyForm.classList.add('hidden');
+    fpForm.classList.add('hidden');
   });
 
   tabReg.addEventListener('click', () => {
@@ -925,10 +929,84 @@ function bindPortalEvents() {
     regForm.classList.remove('hidden');
     loginForm.classList.add('hidden');
     verifyForm.classList.add('hidden');
+    fpForm.classList.add('hidden');
   });
 
   document.getElementById('btnBackToLogin')?.addEventListener('click', () => {
     tabLogin.click();
+  });
+
+  // --- Forgot / reset password flow ---
+  const resetFpForm = () => {
+    document.getElementById('fpResetFields').classList.add('hidden');
+    document.getElementById('fpSubmitBtn').textContent = 'Visszaállító Kód Küldése';
+    document.getElementById('fpCode').value = '';
+    document.getElementById('fpNewPassword').value = '';
+    document.getElementById('fpError').classList.add('hidden');
+    document.getElementById('fpInfo').classList.add('hidden');
+  };
+
+  document.getElementById('linkForgotPassword')?.addEventListener('click', () => {
+    loginForm.classList.add('hidden');
+    regForm.classList.add('hidden');
+    verifyForm.classList.add('hidden');
+    fpForm.classList.remove('hidden');
+    resetFpForm();
+    setTimeout(() => document.getElementById('fpIdentifier')?.focus(), 50);
+  });
+
+  document.getElementById('btnBackToLoginForgot')?.addEventListener('click', () => {
+    fpForm.classList.add('hidden');
+    tabLogin.click();
+  });
+
+  fpForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const errEl = document.getElementById('fpError');
+    const infoEl = document.getElementById('fpInfo');
+    errEl.classList.add('hidden');
+    infoEl.classList.add('hidden');
+    const identifier = document.getElementById('fpIdentifier').value;
+    const resetFields = document.getElementById('fpResetFields');
+    try {
+      if (resetFields.classList.contains('hidden')) {
+        // Step 1: request the 6-digit reset code by email
+        const res = await fetch('/api/auth/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Hiba a kód küldésekor');
+        resetFields.classList.remove('hidden');
+        document.getElementById('fpSubmitBtn').textContent = 'Új Jelszó Mentése és Belépés';
+        infoEl.textContent = data.maskedEmail
+          ? `Elküldtük a 6 jegyű visszaállító kódot ide: ${data.maskedEmail} (15 percig érvényes)`
+          : 'Ha létezik fiók ezzel az adattal, kiküldtük a visszaállító kódot a hozzá tartozó e-mail címre.';
+        infoEl.classList.remove('hidden');
+        setTimeout(() => document.getElementById('fpCode')?.focus(), 50);
+      } else {
+        // Step 2: verify code + set new password (auto-login on success)
+        const res = await fetch('/api/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            identifier,
+            code: document.getElementById('fpCode').value,
+            newPassword: document.getElementById('fpNewPassword').value
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Sikertelen jelszó-visszaállítás');
+        resetFpForm();
+        fpForm.classList.add('hidden');
+        setLoggedInUser(data.user, data.authToken);
+        await syncPortalData();
+      }
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.classList.remove('hidden');
+    }
   });
 
   loginForm.addEventListener('submit', async e => {

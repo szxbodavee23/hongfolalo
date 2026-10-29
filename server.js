@@ -103,7 +103,7 @@ async function handleApi(req, res, pathname, urlObj) {
     // ==================== ANTI-BOT CAPTCHA & EMAIL VERIFICATION ====================
     if (req.method === 'GET' && pathname === '/api/auth/captcha') {
       const limit = checkRateLimit(req, 'captcha', 30, 60000);
-      if (!limit.allowed) return sendJson(res, 429, { error: 'Túl sok CAPTCHA kérés!' });
+      if (!limit.allowed) return sendJson(res, 429, { error: 'Túl sok próbálkozás! Kérlek várj egy kicsit.' });
       const challenge = generateCaptchaChallenge();
       return sendJson(res, 200, { ok: true, ...challenge });
     }
@@ -367,7 +367,7 @@ async function handleApi(req, res, pathname, urlObj) {
       return sendJson(res, 201, { ok: true, match });
     }
 
-    return sendJson(res, 404, { error: 'API végpont nem található!' });
+    return sendJson(res, 404, { error: 'A kért tartalom nem található!' });
   } catch (err) {
     const status = err.message?.includes('Nincs jogosultságod') ? 403 : 400;
     return sendJson(res, status, { error: err.message || 'Szerver hiba' });

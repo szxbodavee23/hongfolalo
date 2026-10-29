@@ -24,7 +24,7 @@
       <div class="navbar__right">
         <div class="status-badge" id="dbStatusBadge">
           <span class="status-badge__dot" id="dbDot"></span>
-          <span id="dbStatusText">Adatbázis...</span>
+          <span id="dbStatusText">Csatlakozás...</span>
         </div>
 
         <div id="navUserSection" class="nav-user hidden">
@@ -73,7 +73,7 @@
         </div>
       </div>
 
-      <!-- MANDATORY LOGIN / REGISTRATION CARD (NO SAVED ACCOUNTS) -->
+      <!-- LOGIN / REGISTRATION CARD -->
       <div class="auth-card">
         <div class="auth-tabs">
           <button type="button" class="auth-tab active" id="tabLoginBtn">Bejelentkezés</button>
@@ -96,7 +96,7 @@
           <button type="submit" class="btn btn--primary btn--block">Bejelentkezés</button>
         </form>
 
-        <!-- Register Form (With Anti-Bot CAPTCHA & Honeypot) -->
+        <!-- Register Form -->
         <form id="registerForm" class="auth-form hidden" autocomplete="off">
           <p class="auth-form__sub">Regisztrálj új játékos fiókot (e-mail megerősítés szükséges).</p>
 
@@ -117,9 +117,9 @@
           </div>
 
           <div class="field">
-            <label for="regCaptchaAnswer">Bot elleni védelem – Mennyi a művelet eredménye?</label>
+            <label for="regCaptchaAnswer">Biztonsági ellenőrzés – Mennyi a művelet eredménye?</label>
             <div style="display:flex; align-items:center; gap:10px;">
-              <img id="captchaImg" alt="CAPTCHA" style="height:44px; border-radius:8px; border:1px solid var(--border-subtle);" />
+              <img id="captchaImg" alt="Biztonsági ellenőrzőkód" style="height:44px; border-radius:8px; border:1px solid var(--border-subtle);" />
               <input type="number" id="regCaptchaAnswer" class="input" placeholder="Eredmény" style="flex:1;" required />
               <button type="button" class="btn btn--ghost btn--sm" id="btnReloadCaptcha" title="Új feladvány">↻</button>
             </div>
@@ -240,7 +240,7 @@
               <!-- 3 Player Slots -->
               <div class="slots-grid" id="lobbySlotsGrid"></div>
 
-              <!-- Invite Registered Users from DB -->
+              <!-- Invite Registered Users -->
               <div class="invite-users-section">
                 <div class="invite-users-section__header">
                   <span>Regisztrált játékosok meghívása a lobbyba</span>
@@ -436,7 +436,7 @@
         </div>
       </div>
 
-      <!-- TAB 4 (ADMIN ONLY): QUESTION APPROVAL & DATABASE MANAGER -->
+      <!-- TAB 4 (ADMIN ONLY): QUESTION APPROVAL & MANAGEMENT -->
       <div id="tabAdminQuestions" class="dash-pane hidden">
         <div class="panel" style="margin-bottom: 32px;">
           <div class="panel__header">
@@ -513,13 +513,13 @@
               </div>
 
               <div class="alert alert--error hidden" id="adminQFeedback"></div>
-              <button type="submit" class="btn btn--primary">Azonnali Mentés az Adatbázisba</button>
+              <button type="submit" class="btn btn--primary">Kérdés mentése</button>
             </form>
           </div>
 
           <div class="panel">
             <div class="panel__header">
-              <h2 class="panel__title" id="adminApprovedCountTitle">Elfogadott Kérdések az Adatbázisban</h2>
+              <h2 class="panel__title" id="adminApprovedCountTitle">Elfogadott kérdések</h2>
               <input type="text" id="adminQFilterInput" class="input input--sm" placeholder="Keresés..." style="max-width: 200px;" />
             </div>
             <div class="q-list" id="adminApprovedQuestionsList"></div>

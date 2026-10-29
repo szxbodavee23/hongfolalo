@@ -44,6 +44,7 @@ async function initPortal() {
   renderAuthGate();
   checkUrlQueryParams();
   startInvitePolling();
+  setInterval(refreshLiveStats, 4000);
 }
 
 function loadUserFromStorage() {
@@ -170,20 +171,30 @@ function switchDashboardTab(targetId) {
   });
 }
 
+async function refreshLiveStats() {
+  const textEl = document.getElementById('dbStatusText');
+  const dotEl = document.getElementById('dbDot');
+  if (!textEl) return;
+  try {
+    const res = await fetch('/api/status');
+    if (!res.ok) throw new Error('unreachable');
+    const st = await res.json();
+    const qTotal = (st.counts?.multipleChoice || 0) + (st.counts?.estimation || 0);
+    textEl.textContent = `${st.counts?.users || 0} játékos • ${qTotal} kérdés`;
+    if (dotEl) dotEl.style.background = '#38c172';
+  } catch {
+    textEl.textContent = 'Kapcsolat megszakadt';
+    if (dotEl) dotEl.style.background = '#e3342f';
+  }
+}
+
 async function syncPortalData() {
   try {
-    const [stRes, uRes, mRes] = await Promise.all([
-      fetch('/api/status'),
+    await refreshLiveStats();
+    const [uRes, mRes] = await Promise.all([
       fetch('/api/users'),
       fetch('/api/matches')
     ]);
-
-    if (stRes.ok) {
-      const st = await stRes.json();
-      const qTotal = (st.counts?.multipleChoice || 0) + (st.counts?.estimation || 0);
-      document.getElementById('dbStatusText').textContent =
-        `${st.engine} • ${st.counts?.users || 0} játékos • ${qTotal} kérdés`;
-    }
     if (uRes.ok) {
       const uData = await uRes.json();
       registeredUsers = uData.users || [];
@@ -203,7 +214,7 @@ async function syncPortalData() {
       }
     }
   } catch {
-    document.getElementById('dbStatusText').textContent = 'Offline mód';
+    document.getElementById('dbStatusText').textContent = 'Kapcsolat megszakadt';
   }
 }
 
@@ -525,7 +536,7 @@ function renderLeaderboardTable() {
   if (!tbody) return;
   tbody.innerHTML = '';
   if (registeredUsers.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text-muted);">Még nincs regisztrált játékos az adatbázisban.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text-muted);">Még nincs regisztrált játékos.</td></tr>';
     return;
   }
   registeredUsers.forEach((u, idx) => {
@@ -695,7 +706,7 @@ function renderAdminUsersTable() {
   tbody.innerHTML = '';
 
   if (adminUsers.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text-muted);">Még nincs regisztrált játékos az adatbázisban.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text-muted);">Még nincs regisztrált játékos.</td></tr>';
     return;
   }
 

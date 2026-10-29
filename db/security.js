@@ -153,7 +153,7 @@ export function verifyCaptchaChallenge(captchaToken, userAnswer, honeypotValue =
     throw new Error('Bot védelem aktiválódott!');
   }
   if (!captchaToken || typeof captchaToken !== 'string' || !captchaToken.includes('.')) {
-    throw new Error('Hiányzó biztonsági ellenőrzőkód (CAPTCHA)!');
+    throw new Error('Hiányzó biztonsági ellenőrzőkód!');
   }
   const [dataB64, sig] = captchaToken.split('.');
   const expectedSig = crypto.createHmac('sha256', SERVER_SECRET).update(dataB64).digest('base64url');
@@ -167,7 +167,7 @@ export function verifyCaptchaChallenge(captchaToken, userAnswer, honeypotValue =
   try {
     parsed = JSON.parse(Buffer.from(dataB64, 'base64url').toString('utf8'));
   } catch {
-    throw new Error('Érvénytelen CAPTCHA adat!');
+    throw new Error('Érvénytelen biztonsági ellenőrzőkód!');
   }
 
   if (!parsed.exp || Date.now() > parsed.exp) {

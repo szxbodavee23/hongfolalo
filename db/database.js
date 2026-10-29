@@ -107,6 +107,11 @@ class DatabaseService {
           [ADMIN_USERNAME, ADMIN_PASSWORD_HASH]
         );
 
+        // Push corrected question texts/options from the bundled bank into existing rows
+        await this.syncQuestionBank(
+          (sql, params) => client.query(sql, params)
+        );
+
         this.pool = pool;
         this.mode = 'postgres-docker';
         console.log('[DB] Connected to PostgreSQL (Docker) at', `${pgConfig.host}:${pgConfig.port}/${pgConfig.database}`);
@@ -212,6 +217,34 @@ class DatabaseService {
       for (const q of ESTIMATION_QUESTIONS) {
         insertQ.run(q.id, 'estimation', q.category, q.question, null, null, q.answer, q.unit || '', 2);
       }
+    }
+
+    // Push corrected question texts/options into existing rows as well
+    this.syncQuestionBank(
+      (sql, params) => Promise.resolve(this.sqlite.prepare(sql.replace(/\$(\d+)/g, '?$1')).run(...params))
+    ).catch(err => console.warn('[DB] Question bank sync failed:', err.message));
+  }
+
+  // Updates stored question rows whose text/options/answer differ from the bundled
+  // bank (js/questions.js). Idempotent: rows already matching are skipped.
+  async syncQuestionBank(runQuery) {
+    try {
+      for (const q of MULTIPLE_CHOICE_QUESTIONS) {
+        await runQuery(
+          `UPDATE questions SET question_text = $1, options_json = $2, correct_index = $3
+           WHERE external_id = $4 AND (question_text <> $1 OR options_json <> $2 OR correct_index <> $3)`,
+          [q.question, JSON.stringify(q.options), q.correctIndex, q.id]
+        );
+      }
+      for (const q of ESTIMATION_QUESTIONS) {
+        await runQuery(
+          `UPDATE questions SET question_text = $1, estimation_answer = $2, unit = $3
+           WHERE external_id = $4 AND (question_text <> $1 OR estimation_answer <> $2 OR unit <> $3)`,
+          [q.question, q.answer, q.unit || '', q.id]
+        );
+      }
+    } catch (err) {
+      console.warn('[DB] Question bank sync skipped:', err.message);
     }
   }
 

@@ -1897,7 +1897,7 @@ export const ESTIMATION_QUESTIONS = [
   {
     "id": "est_270",
     "category": "Tudomány és Technika",
-    "question": "Hány Celsius-fok az abszolút nulla fok (kerekítve: -273, abszolút értéke)?",
+    "question": "Hány Celsius-fok az abszolút nulla fok abszolút értéke (kerekítve)?",
     "answer": 273,
     "unit": "fok"
   },
@@ -1974,203 +1974,203 @@ export const ESTIMATION_QUESTIONS = [
   {
     "id": "est_281",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Athéni nyári olimpiai játékokat (pl. 1896)?",
+    "question": "Melyik évben rendezték a(z) Athéni nyári olimpiai játékokat?",
     "answer": 1896,
     "unit": "év"
   },
   {
     "id": "est_282",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Párizsi nyári olimpiai játékokat (pl. 1900)?",
+    "question": "Melyik évben rendezték a(z) Párizsi nyári olimpiai játékokat?",
     "answer": 1900,
     "unit": "év"
   },
   {
     "id": "est_283",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) St. Louisi nyári olimpiai játékokat (pl. 1904)?",
+    "question": "Melyik évben rendezték a(z) St. Louisi nyári olimpiai játékokat?",
     "answer": 1904,
     "unit": "év"
   },
   {
     "id": "est_284",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Londoni nyári olimpiai játékokat (pl. 1908)?",
+    "question": "Melyik évben rendezték a(z) Londoni nyári olimpiai játékokat?",
     "answer": 1908,
     "unit": "év"
   },
   {
     "id": "est_285",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Stockholmi nyári olimpiai játékokat (pl. 1912)?",
+    "question": "Melyik évben rendezték a(z) Stockholmi nyári olimpiai játékokat?",
     "answer": 1912,
     "unit": "év"
   },
   {
     "id": "est_286",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Antwerpeni nyári olimpiai játékokat (pl. 1920)?",
+    "question": "Melyik évben rendezték a(z) Antwerpeni nyári olimpiai játékokat?",
     "answer": 1920,
     "unit": "év"
   },
   {
     "id": "est_287",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Párizsi nyári olimpiai játékokat (pl. 1924)?",
+    "question": "Melyik évben rendezték a(z) Párizsi nyári olimpiai játékokat?",
     "answer": 1924,
     "unit": "év"
   },
   {
     "id": "est_288",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Amszterdami nyári olimpiai játékokat (pl. 1928)?",
+    "question": "Melyik évben rendezték a(z) Amszterdami nyári olimpiai játékokat?",
     "answer": 1928,
     "unit": "év"
   },
   {
     "id": "est_289",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Los Angelesi nyári olimpiai játékokat (pl. 1932)?",
+    "question": "Melyik évben rendezték a(z) Los Angelesi nyári olimpiai játékokat?",
     "answer": 1932,
     "unit": "év"
   },
   {
     "id": "est_290",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Berlini nyári olimpiai játékokat (pl. 1936)?",
+    "question": "Melyik évben rendezték a(z) Berlini nyári olimpiai játékokat?",
     "answer": 1936,
     "unit": "év"
   },
   {
     "id": "est_291",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Londoni nyári olimpiai játékokat (pl. 1948)?",
+    "question": "Melyik évben rendezték a(z) Londoni nyári olimpiai játékokat?",
     "answer": 1948,
     "unit": "év"
   },
   {
     "id": "est_292",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Helsinkii nyári olimpiai játékokat (pl. 1952)?",
+    "question": "Melyik évben rendezték a(z) Helsinkii nyári olimpiai játékokat?",
     "answer": 1952,
     "unit": "év"
   },
   {
     "id": "est_293",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Melbournei nyári olimpiai játékokat (pl. 1956)?",
+    "question": "Melyik évben rendezték a(z) Melbournei nyári olimpiai játékokat?",
     "answer": 1956,
     "unit": "év"
   },
   {
     "id": "est_294",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Római nyári olimpiai játékokat (pl. 1960)?",
+    "question": "Melyik évben rendezték a(z) Római nyári olimpiai játékokat?",
     "answer": 1960,
     "unit": "év"
   },
   {
     "id": "est_295",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Tokiói nyári olimpiai játékokat (pl. 1964)?",
+    "question": "Melyik évben rendezték a(z) Tokiói nyári olimpiai játékokat?",
     "answer": 1964,
     "unit": "év"
   },
   {
     "id": "est_296",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Mexikóvárosi nyári olimpiai játékokat (pl. 1968)?",
+    "question": "Melyik évben rendezték a(z) Mexikóvárosi nyári olimpiai játékokat?",
     "answer": 1968,
     "unit": "év"
   },
   {
     "id": "est_297",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Müncheni nyári olimpiai játékokat (pl. 1972)?",
+    "question": "Melyik évben rendezték a(z) Müncheni nyári olimpiai játékokat?",
     "answer": 1972,
     "unit": "év"
   },
   {
     "id": "est_298",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Montreali nyári olimpiai játékokat (pl. 1976)?",
+    "question": "Melyik évben rendezték a(z) Montreali nyári olimpiai játékokat?",
     "answer": 1976,
     "unit": "év"
   },
   {
     "id": "est_299",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Moszkvai nyári olimpiai játékokat (pl. 1980)?",
+    "question": "Melyik évben rendezték a(z) Moszkvai nyári olimpiai játékokat?",
     "answer": 1980,
     "unit": "év"
   },
   {
     "id": "est_300",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Los Angelesi nyári olimpiai játékokat (pl. 1984)?",
+    "question": "Melyik évben rendezték a(z) Los Angelesi nyári olimpiai játékokat?",
     "answer": 1984,
     "unit": "év"
   },
   {
     "id": "est_301",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Szöuli nyári olimpiai játékokat (pl. 1988)?",
+    "question": "Melyik évben rendezték a(z) Szöuli nyári olimpiai játékokat?",
     "answer": 1988,
     "unit": "év"
   },
   {
     "id": "est_302",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Barcelonai nyári olimpiai játékokat (pl. 1992)?",
+    "question": "Melyik évben rendezték a(z) Barcelonai nyári olimpiai játékokat?",
     "answer": 1992,
     "unit": "év"
   },
   {
     "id": "est_303",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Atlantai nyári olimpiai játékokat (pl. 1996)?",
+    "question": "Melyik évben rendezték a(z) Atlantai nyári olimpiai játékokat?",
     "answer": 1996,
     "unit": "év"
   },
   {
     "id": "est_304",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Sydneyi nyári olimpiai játékokat (pl. 2000)?",
+    "question": "Melyik évben rendezték a(z) Sydneyi nyári olimpiai játékokat?",
     "answer": 2000,
     "unit": "év"
   },
   {
     "id": "est_305",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Athéni nyári olimpiai játékokat (pl. 2004)?",
+    "question": "Melyik évben rendezték a(z) Athéni nyári olimpiai játékokat?",
     "answer": 2004,
     "unit": "év"
   },
   {
     "id": "est_306",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Pekingi nyári olimpiai játékokat (pl. 2008)?",
+    "question": "Melyik évben rendezték a(z) Pekingi nyári olimpiai játékokat?",
     "answer": 2008,
     "unit": "év"
   },
   {
     "id": "est_307",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Londoni nyári olimpiai játékokat (pl. 2012)?",
+    "question": "Melyik évben rendezték a(z) Londoni nyári olimpiai játékokat?",
     "answer": 2012,
     "unit": "év"
   },
   {
     "id": "est_308",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Rio de Janeiroi nyári olimpiai játékokat (pl. 2016)?",
+    "question": "Melyik évben rendezték a(z) Rio de Janeiroi nyári olimpiai játékokat?",
     "answer": 2016,
     "unit": "év"
   },
   {
     "id": "est_309",
     "category": "Sport",
-    "question": "Melyik évben rendezték a(z) Párizsi nyári olimpiai játékokat (pl. 2024)?",
+    "question": "Melyik évben rendezték a(z) Párizsi nyári olimpiai játékokat?",
     "answer": 2024,
     "unit": "év"
   },
@@ -2373,7 +2373,7 @@ export const ESTIMATION_QUESTIONS = [
   {
     "id": "est_338",
     "category": "Film, Zene, Művészet",
-    "question": "Melyik évben mutatták be A tanú című filmvígjátékot (elkészülte: 1969)?",
+    "question": "Melyik évben mutatták be A tanú című filmvígjátékot?",
     "answer": 1969,
     "unit": "év"
   },
@@ -3710,14 +3710,14 @@ export const ESTIMATION_QUESTIONS = [
   {
     "id": "est_529",
     "category": "Történelem",
-    "question": "Melyik évben alapította Szent István a pécsi és az egri püspökséget (1009)?",
+    "question": "Melyik évben alapította Szent István a pécsi és az egri püspökséget?",
     "answer": 1009,
     "unit": "év"
   },
   {
     "id": "est_530",
     "category": "Történelem",
-    "question": "Hány vármegyét szervezett meg Szent István király az államalapítás korában (kb. 45)?",
+    "question": "Hány vármegyét szervezett meg Szent István király az államalapítás korában?",
     "answer": 45,
     "unit": "vármegye"
   },
@@ -3808,182 +3808,182 @@ export const ESTIMATION_QUESTIONS = [
   {
     "id": "est_543",
     "category": "Történelem",
-    "question": "Melyik évben alapították Róma városát a hagyomány szerint (Kr. e. 753)?",
+    "question": "Melyik évben alapították Róma városát a hagyomány szerint (Kr. e.)?",
     "answer": 753,
     "unit": "Kr. e. év"
   },
   {
     "id": "est_544",
     "category": "Történelem",
-    "question": "Melyik évben rendezték az első feljegyzett ókori olümpiai játékokat (Kr. e. 776)?",
+    "question": "Melyik évben rendezték az első feljegyzett ókori olümpiai játékokat (Kr. e.)?",
     "answer": 776,
     "unit": "Kr. e. év"
   },
   {
     "id": "est_545",
     "category": "Történelem",
-    "question": "Melyik évben gyilkolták meg Julius Caesart (Kr. e. 44)?",
+    "question": "Melyik évben gyilkolták meg Julius Caesart (Kr. e.)?",
     "answer": 44,
     "unit": "Kr. e. év"
   },
   {
     "id": "est_546",
     "category": "Történelem",
-    "question": "Melyik évben pusztította el a Vezúv kitörése Pompeji városát (Kr. u. 79)?",
+    "question": "Melyik évben pusztította el a Vezúv kitörése Pompeji városát (Kr. u.)?",
     "answer": 79,
     "unit": "év"
   },
   {
     "id": "est_547",
     "category": "Történelem",
-    "question": "Melyik évben adta ki Nagy Konstantin császár a milánói ediktumot (313)?",
+    "question": "Melyik évben adta ki Nagy Konstantin császár a milánói ediktumot?",
     "answer": 313,
     "unit": "év"
   },
   {
     "id": "est_548",
     "category": "Történelem",
-    "question": "Melyik évben osztotta két részre a Római Birodalmat Theodosius császár (395)?",
+    "question": "Melyik évben osztotta két részre a Római Birodalmat Theodosius császár?",
     "answer": 395,
     "unit": "év"
   },
   {
     "id": "est_549",
     "category": "Történelem",
-    "question": "Melyik évben koronázták császárrá Nagy Károlyt Rómában (800)?",
+    "question": "Melyik évben koronázták császárrá Nagy Károlyt Rómában?",
     "answer": 800,
     "unit": "év"
   },
   {
     "id": "est_550",
     "category": "Történelem",
-    "question": "Melyik évben történt a kelet–nyugati egyházszakadás (nagy szkizma: 1054)?",
+    "question": "Melyik évben történt a kelet–nyugati egyházszakadás (nagy szkizma)?",
     "answer": 1054,
     "unit": "év"
   },
   {
     "id": "est_551",
     "category": "Történelem",
-    "question": "Melyik évben indult az első keresztes hadjárat (1096)?",
+    "question": "Melyik évben indult az első keresztes hadjárat?",
     "answer": 1096,
     "unit": "év"
   },
   {
     "id": "est_552",
     "category": "Történelem",
-    "question": "Melyik évben érte el Vasco da Gama Indiát tengeri úton (1498)?",
+    "question": "Melyik évben érte el Vasco da Gama Indiát tengeri úton?",
     "answer": 1498,
     "unit": "év"
   },
   {
     "id": "est_553",
     "category": "Történelem",
-    "question": "Melyik évben indult el Magellán flottája a Föld első körülhajózására (1519)?",
+    "question": "Melyik évben indult el Magellán flottája a Föld első körülhajózására?",
     "answer": 1519,
     "unit": "év"
   },
   {
     "id": "est_554",
     "category": "Történelem",
-    "question": "Melyik évben égett le London nagy része a nagy londoni tűzvészben (1666)?",
+    "question": "Melyik évben égett le London nagy része a nagy londoni tűzvészben?",
     "answer": 1666,
     "unit": "év"
   },
   {
     "id": "est_555",
     "category": "Történelem",
-    "question": "Melyik évben zajlott a bostoni teadélután (1773)?",
+    "question": "Melyik évben zajlott a bostoni teadélután?",
     "answer": 1773,
     "unit": "év"
   },
   {
     "id": "est_556",
     "category": "Történelem",
-    "question": "Melyik évben kezdődött az amerikai polgárháború (1861)?",
+    "question": "Melyik évben kezdődött az amerikai polgárháború?",
     "answer": 1861,
     "unit": "év"
   },
   {
     "id": "est_557",
     "category": "Történelem",
-    "question": "Melyik évben ért véget az amerikai polgárháború (1865)?",
+    "question": "Melyik évben ért véget az amerikai polgárháború?",
     "answer": 1865,
     "unit": "év"
   },
   {
     "id": "est_558",
     "category": "Történelem",
-    "question": "Melyik évben egyesült Németország Bismarck vezetésével (1871)?",
+    "question": "Melyik évben egyesült Németország Bismarck vezetésével?",
     "answer": 1871,
     "unit": "év"
   },
   {
     "id": "est_559",
     "category": "Történelem",
-    "question": "Melyik évben adták át a párizsi Eiffel-tornyot a világkiállításra (1889)?",
+    "question": "Melyik évben adták át a párizsi Eiffel-tornyot a világkiállításra?",
     "answer": 1889,
     "unit": "év"
   },
   {
     "id": "est_560",
     "category": "Történelem",
-    "question": "Melyik évben süllyesztették el a Lusitania óceánjárót (1915)?",
+    "question": "Melyik évben süllyesztették el a Lusitania óceánjárót?",
     "answer": 1915,
     "unit": "év"
   },
   {
     "id": "est_561",
     "category": "Történelem",
-    "question": "Melyik évben robbant ki a nagy gazdasági világválság a New York-i tőzsdekrachhal (1929)?",
+    "question": "Melyik évben robbant ki a nagy gazdasági világválság a New York-i tőzsdekrachhal?",
     "answer": 1929,
     "unit": "év"
   },
   {
     "id": "est_562",
     "category": "Történelem",
-    "question": "Melyik évben támadta meg Japán Pearl Harbort (1941)?",
+    "question": "Melyik évben támadta meg Japán Pearl Harbort?",
     "answer": 1941,
     "unit": "év"
   },
   {
     "id": "est_563",
     "category": "Történelem",
-    "question": "Melyik évben kiáltották ki Izrael Államot (1948)?",
+    "question": "Melyik évben kiáltották ki Izrael Államot?",
     "answer": 1948,
     "unit": "év"
   },
   {
     "id": "est_564",
     "category": "Történelem",
-    "question": "Melyik évben építették fel a berlini falat (1961)?",
+    "question": "Melyik évben építették fel a berlini falat?",
     "answer": 1961,
     "unit": "év"
   },
   {
     "id": "est_565",
     "category": "Történelem",
-    "question": "Melyik évben zajlott a kubai rakétaválság (1962)?",
+    "question": "Melyik évben zajlott a kubai rakétaválság?",
     "answer": 1962,
     "unit": "év"
   },
   {
     "id": "est_566",
     "category": "Történelem",
-    "question": "Melyik évben követték el a merényletet John F. Kennedy elnök ellen Dallasban (1963)?",
+    "question": "Melyik évben követték el a merényletet John F. Kennedy elnök ellen Dallasban?",
     "answer": 1963,
     "unit": "év"
   },
   {
     "id": "est_567",
     "category": "Történelem",
-    "question": "Melyik évben egyesült újra Németország (1990)?",
+    "question": "Melyik évben egyesült újra Németország?",
     "answer": 1990,
     "unit": "év"
   },
   {
     "id": "est_568",
     "category": "Történelem",
-    "question": "Melyik évben vezették be a készpénzes eurót az eurozónában (2002)?",
+    "question": "Melyik évben vezették be a készpénzes eurót az eurozónában?",
     "answer": 2002,
     "unit": "év"
   },
@@ -4074,14 +4074,14 @@ export const ESTIMATION_QUESTIONS = [
   {
     "id": "est_581",
     "category": "Földrajz",
-    "question": "Hány fokos szélességi kör a Ráktérítő és a Baktérítő (kerekítve: 23)?",
+    "question": "Hány fokos szélességi kör a Ráktérítő és a Baktérítő (kerekítve)?",
     "answer": 23,
     "unit": "fok"
   },
   {
     "id": "est_582",
     "category": "Földrajz",
-    "question": "Hány fokos szélességi kör az északi és a déli sarkkör (kerekítve: 66)?",
+    "question": "Hány fokos szélességi kör az északi és a déli sarkkör (kerekítve)?",
     "answer": 66,
     "unit": "fok"
   },
@@ -4144,7 +4144,7 @@ export const ESTIMATION_QUESTIONS = [
   {
     "id": "est_591",
     "category": "Tudomány és Technika",
-    "question": "Hány kilométerre kering átlagosan a Hold a Földtől (ezerre kerekítve: 384000)?",
+    "question": "Hány kilométerre kering átlagosan a Hold a Földtől (ezerre kerekítve)?",
     "answer": 384000,
     "unit": "km"
   },
@@ -4284,7 +4284,7 @@ export const ESTIMATION_QUESTIONS = [
   {
     "id": "est_611",
     "category": "Tudomány és Technika",
-    "question": "Hány csigolyából áll az emberi gerincoszlop összesen (a keresztcsonti és farkcsigolyákkal együtt, kb. 33)?",
+    "question": "Hány csigolyából áll az emberi gerincoszlop összesen (a keresztcsonti és farkcsigolyákkal együtt)?",
     "answer": 33,
     "unit": "csigolya"
   },
@@ -4354,7 +4354,7 @@ export const ESTIMATION_QUESTIONS = [
   {
     "id": "est_621",
     "category": "Sport",
-    "question": "Hány pontról indul egy klasszikus verseny-darts leg (501)?",
+    "question": "Hány pontról indul egy klasszikus verseny-darts leg?",
     "answer": 501,
     "unit": "pont"
   },
@@ -4418,7 +4418,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_2",
     "category": "Történelem",
-    "question": "Melyik személy, helyszín vagy fogalom kapcsolódik szorosan ehhez az eseményhez: A pozsonyi csata (907)?",
+    "question": "Melyik város mellett vívták 907-ben a honfoglaló magyarok győztes csatáját a bajorok ellen?",
     "options": [
       "Pozsony",
       "Augsburg",
@@ -4526,7 +4526,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_11",
     "category": "Történelem",
-    "question": "Melyik személy, helyszín vagy fogalom kapcsolódik szorosan ehhez az eseményhez: Könyves Kálmán trónra lépése (1095)?",
+    "question": "Ki lépett trónra 1095-ben?",
     "options": [
       "Könyves Kálmán",
       "II. István",
@@ -4538,7 +4538,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_12",
     "category": "Történelem",
-    "question": "Melyik személy, helyszín vagy fogalom kapcsolódik szorosan ehhez az eseményhez: III. Béla trónra lépése (1172)?",
+    "question": "Ki lépett trónra 1172-ben?",
     "options": [
       "III. Béla",
       "Imre király",
@@ -4562,7 +4562,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_14",
     "category": "Történelem",
-    "question": "Melyik személy, helyszín vagy fogalom kapcsolódik szorosan ehhez az eseményhez: IV. Béla trónra lépése (1235)?",
+    "question": "Ki lépett trónra 1235-ben?",
     "options": [
       "IV. Béla",
       "II. András",
@@ -4634,7 +4634,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_20",
     "category": "Történelem",
-    "question": "Melyik személy, helyszín vagy fogalom kapcsolódik szorosan ehhez az eseményhez: A visegrádi királytalálkozó (1335)?",
+    "question": "Hol tartották 1335-ben a közép-európai uralkodók híres királytalálkozóját?",
     "options": [
       "Visegrád",
       "Esztergom",
@@ -4670,7 +4670,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_23",
     "category": "Történelem",
-    "question": "Melyik személy, helyszín vagy fogalom kapcsolódik szorosan ehhez az eseményhez: A pécsi egyetem alapítása (1367)?",
+    "question": "Melyik városban alapították 1367-ben Magyarország első egyetemét?",
     "options": [
       "Pécs",
       "Buda",
@@ -4682,7 +4682,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_24",
     "category": "Történelem",
-    "question": "Melyik személy, helyszín vagy fogalom kapcsolódik szorosan ehhez az eseményhez: Luxemburgi Zsigmond koronázása (1387)?",
+    "question": "Kit koronáztak magyar királlyá 1387-ben?",
     "options": [
       "Luxemburgi Zsigmond",
       "Albert király",
@@ -4694,7 +4694,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_25",
     "category": "Történelem",
-    "question": "Melyik személy, helyszín vagy fogalom kapcsolódik szorosan ehhez az eseményhez: A nikápolyi csata (1396)?",
+    "question": "Hol szenvedett vereséget Zsigmond király keresztes serege 1396-ban?",
     "options": [
       "Nikápoly",
       "Várna",
@@ -4730,7 +4730,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_28",
     "category": "Történelem",
-    "question": "Melyik személy, helyszín vagy fogalom kapcsolódik szorosan ehhez az eseményhez: Hunyadi Mátyás trónra lépése (1458)?",
+    "question": "Ki lépett trónra 1458-ban?",
     "options": [
       "Hunyadi Mátyás",
       "V. László",
@@ -4754,7 +4754,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_30",
     "category": "Történelem",
-    "question": "Melyik személy, helyszín vagy fogalom kapcsolódik szorosan ehhez az eseményhez: Bécs elfoglalása Mátyás által (1485)?",
+    "question": "Melyik várost foglalta el Hunyadi Mátyás 1485-ben?",
     "options": [
       "Bécs",
       "Prága",
@@ -4826,7 +4826,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_36",
     "category": "Történelem",
-    "question": "Melyik személy, helyszín vagy fogalom kapcsolódik szorosan ehhez az eseményhez: Buda török kézre kerülése (1541)?",
+    "question": "Melyik évben került Buda török kézre a mohácsi vész után?",
     "options": [
       "1541",
       "1526",
@@ -4862,7 +4862,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_39",
     "category": "Történelem",
-    "question": "Melyik személy, helyszín vagy fogalom kapcsolódik szorosan ehhez az eseményhez: A tordai országgyűlés (1568)?",
+    "question": "Melyik városban hirdették ki 1568-ban a vallási türelmet országgyűlésen?",
     "options": [
       "Torda",
       "Gyulafehérvár",
@@ -4898,7 +4898,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_42",
     "category": "Történelem",
-    "question": "Melyik személy, helyszín vagy fogalom kapcsolódik szorosan ehhez az eseményhez: Bethlen Gábor fejedelemmé választása (1613)?",
+    "question": "Kit választottak Erdély fejedelmévé 1613-ban?",
     "options": [
       "Bethlen Gábor",
       "Bocskai István",
@@ -4934,7 +4934,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_45",
     "category": "Történelem",
-    "question": "Melyik személy, helyszín vagy fogalom kapcsolódik szorosan ehhez az eseményhez: A karlócai béke (1699)?",
+    "question": "Hol kötötték 1699-ben a török elleni háborúkat lezáró békét?",
     "options": [
       "Karlóca",
       "Pozsarevac",
@@ -4958,7 +4958,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_47",
     "category": "Történelem",
-    "question": "Melyik személy, helyszín vagy fogalom kapcsolódik szorosan ehhez az eseményhez: Az ónodi országgyűlés (1707)?",
+    "question": "Hol tartották 1707-ben a Rákóczi-szabadságharc híres országgyűlését?",
     "options": [
       "Ónod",
       "Szécsény",
@@ -4994,7 +4994,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_50",
     "category": "Történelem",
-    "question": "Melyik személy, helyszín vagy fogalom kapcsolódik szorosan ehhez az eseményhez: Mária Terézia trónra lépése (1740)?",
+    "question": "Ki lépett trónra 1740-ben?",
     "options": [
       "Mária Terézia",
       "II. József",
@@ -5018,7 +5018,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_52",
     "category": "Történelem",
-    "question": "Melyik személy, helyszín vagy fogalom kapcsolódik szorosan ehhez az eseményhez: II. József trónra lépése (1780)?",
+    "question": "Ki lépett trónra 1780-ban?",
     "options": [
       "II. József",
       "II. Lipót",
@@ -5042,7 +5042,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_54",
     "category": "Történelem",
-    "question": "Melyik személy, helyszín vagy fogalom kapcsolódik szorosan ehhez az eseményhez: Az 1809-es győri csata (1809)?",
+    "question": "Hol vívták 1809-ben a napóleoni háborúk híres magyarországi ütközetét?",
     "options": [
       "Győr",
       "Pozsony",
@@ -5066,7 +5066,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_56",
     "category": "Történelem",
-    "question": "Melyik személy, helyszín vagy fogalom kapcsolódik szorosan ehhez az eseményhez: A Hitel megjelenése (1830)?",
+    "question": "Mi volt a reformkor első jelentős tudományos folyóiratának címe (1830)?",
     "options": [
       "Hitel",
       "Világ",
@@ -5090,7 +5090,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_58",
     "category": "Történelem",
-    "question": "Melyik személy, helyszín vagy fogalom kapcsolódik szorosan ehhez az eseményhez: A magyar nyelv államnyelvvé tétele (1844)?",
+    "question": "Melyik évben tették a magyar nyelvet hivatalos államnyelvvé?",
     "options": [
       "1844",
       "1825",
@@ -5150,7 +5150,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_63",
     "category": "Történelem",
-    "question": "Melyik személy, helyszín vagy fogalom kapcsolódik szorosan ehhez az eseményhez: A millenniumi ünnepségek (1896)?",
+    "question": "Melyik évben ünnepelte Magyarország a honfoglalás ezredik évfordulóját?",
     "options": [
       "1896",
       "1886",
@@ -5198,7 +5198,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_67",
     "category": "Történelem",
-    "question": "Melyik személy, helyszín vagy fogalom kapcsolódik szorosan ehhez az eseményhez: A pengő bevezetése (1927)?",
+    "question": "Melyik pénznemet vezették be Magyarországon 1927-ben?",
     "options": [
       "Pengő",
       "Forint",
@@ -5234,7 +5234,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_70",
     "category": "Történelem",
-    "question": "Melyik személy, helyszín vagy fogalom kapcsolódik szorosan ehhez az eseményhez: Farkas Bertalan űrrepülése (1980)?",
+    "question": "Ki volt az első magyar űrhajós (1980)?",
     "options": [
       "Farkas Bertalan",
       "Magyari Béla",
@@ -5270,7 +5270,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_73",
     "category": "Történelem",
-    "question": "Melyik személy, helyszín vagy fogalom kapcsolódik szorosan ehhez az eseményhez: Magyarország NATO-csatlakozása (1999)?",
+    "question": "Melyik évben csatlakozott Magyarország a NATO katonai szövetséghez?",
     "options": [
       "1999",
       "1995",
@@ -5450,7 +5450,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_88",
     "category": "Történelem",
-    "question": "Melyik válasz kapcsolódik ehhez a világtörténelmi eseményhez: A Szuezi-csatorna megnyitása?",
+    "question": "Melyik csatorna köti össze 1869-től a Földközi-tengert a Vörös-tengerrel?",
     "options": [
       "Szuezi-csatorna",
       "Panamai-csatorna",
@@ -5690,13 +5690,13 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_108",
     "category": "Földrajz",
-    "question": "Melyik vármegye székhelye Békéscsaba?",
+    "question": "Melyik vármegye székhelye Szekszárd?",
     "options": [
-      "Békés",
+      "Tolna",
       "Csongrád-Csanád",
       "Hajdú-Bihar",
       "Komárom-Esztergom"
-    ],
+],
     "correctIndex": 0
   },
   {
@@ -5822,13 +5822,13 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_119",
     "category": "Földrajz",
-    "question": "Mi Győr-Moson-Sopron vármegye székhelye?",
+    "question": "Mi Komárom-Esztergom vármegye székhelye?",
     "options": [
-      "Győr",
+      "Tatabánya",
       "Debrecen",
       "Szolnok",
       "Budapest"
-    ],
+],
     "correctIndex": 0
   },
   {
@@ -5930,13 +5930,13 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_128",
     "category": "Földrajz",
-    "question": "Mi Jász-Nagykun-Szolnok vármegye székhelye?",
+    "question": "Mi Békés vármegye székhelye?",
     "options": [
-      "Szolnok",
+      "Békéscsaba",
       "Tatabánya",
       "Budapest",
       "Szekszárd"
-    ],
+],
     "correctIndex": 0
   },
   {
@@ -6050,13 +6050,13 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_138",
     "category": "Földrajz",
-    "question": "Melyik vármegye székhelye Budapest?",
+    "question": "Melyik vármegye székhelye Debrecen?",
     "options": [
-      "Pest",
+      "Hajdú-Bihar",
       "Szabolcs-Szatmár-Bereg",
       "Veszprém",
       "Baranya"
-    ],
+],
     "correctIndex": 0
   },
   {
@@ -6218,25 +6218,25 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_152",
     "category": "Földrajz",
-    "question": "Mi Veszprém vármegye székhelye?",
+    "question": "Mi Somogy vármegye székhelye?",
     "options": [
-      "Veszprém",
+      "Kaposvár",
       "Zalaegerszeg",
       "Pécs",
       "Szeged"
-    ],
+],
     "correctIndex": 0
   },
   {
     "id": "mc_153",
     "category": "Földrajz",
-    "question": "Melyik vármegye székhelye Veszprém?",
+    "question": "Melyik vármegye székhelye Szeged?",
     "options": [
-      "Veszprém",
+      "Csongrád-Csanád",
       "Bács-Kiskun",
       "Borsod-Abaúj-Zemplén",
       "Győr-Moson-Sopron"
-    ],
+],
     "correctIndex": 0
   },
   {
@@ -6266,13 +6266,13 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_156",
     "category": "Földrajz",
-    "question": "Melyik vármegye székhelye Zalaegerszeg?",
+    "question": "Melyik vármegye székhelye Nyíregyháza?",
     "options": [
-      "Zala",
+      "Szabolcs-Szatmár-Bereg",
       "Baranya",
       "Csongrád-Csanád",
       "Hajdú-Bihar"
-    ],
+],
     "correctIndex": 0
   },
   {
@@ -9782,7 +9782,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_449",
     "category": "Mindennapok és Kultúra",
-    "question": "Melyik város nevéhez fűződik a híres hímzés (kalocsai minta) és a fűszerpaprika?",
+    "question": "Melyik alföldi város híres a fűszerpaprikájáról és a róla elnevezett népi hímzésstílusáról?",
     "options": [
       "Kalocsa",
       "Mezőkövesd",
@@ -9806,7 +9806,7 @@ export const MULTIPLE_CHOICE_QUESTIONS = [
   {
     "id": "mc_451",
     "category": "Mindennapok és Kultúra",
-    "question": "Melyik városban készül a világhírű Herendi Porcelán?",
+    "question": "Melyik településen működik Magyarország világhírű, kézzel festett porcelánmanufaktúrája?",
     "options": [
       "Herend",
       "Pécs",
